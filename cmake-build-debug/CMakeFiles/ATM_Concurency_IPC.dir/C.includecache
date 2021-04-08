@@ -6,10 +6,12 @@
 
 #IncludeRegexTransform: 
 
-C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/main.c
+/home/benni/CLionProjects/ATM_Concurency_IPC/main.c
 stdio.h
 -
 string.h
+-
+pthread.h
 -
 stdlib.h
 -

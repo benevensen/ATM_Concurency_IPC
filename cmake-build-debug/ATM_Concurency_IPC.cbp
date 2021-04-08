@@ -8,76 +8,78 @@
 		<Option virtualFolders="CMake Files\;"/>
 		<Build>
 			<Target title="all">
-				<Option working_dir="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug"/>
+				<Option working_dir="/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
-					<CompileFile command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="edit_cache">
-				<Option working_dir="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug"/>
-				<Option type="4"/>
-				<MakeCommands>
-					<Build command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
-					<CompileFile command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="ATM_Concurency_IPC">
-				<Option output="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/ATM_Concurency_IPC.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug"/>
-				<Option object_output="./"/>
-				<Option type="1"/>
-				<Option compiler="gcc"/>
-				<Compiler>
-					<Add directory="c:\mingw\bin\../lib/gcc/mingw32/6.3.0/include"/>
-					<Add directory="c:\mingw\bin\../lib/gcc/mingw32/6.3.0/../../../../include"/>
-					<Add directory="c:\mingw\bin\../lib/gcc/mingw32/6.3.0/include-fixed"/>
-				</Compiler>
-				<MakeCommands>
-					<Build command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 ATM_Concurency_IPC"/>
-					<CompileFile command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="ATM_Concurency_IPC/fast">
-				<Option output="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/ATM_Concurency_IPC.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug"/>
-				<Option object_output="./"/>
-				<Option type="1"/>
-				<Option compiler="gcc"/>
-				<Compiler>
-					<Add directory="c:\mingw\bin\../lib/gcc/mingw32/6.3.0/include"/>
-					<Add directory="c:\mingw\bin\../lib/gcc/mingw32/6.3.0/../../../../include"/>
-					<Add directory="c:\mingw\bin\../lib/gcc/mingw32/6.3.0/include-fixed"/>
-				</Compiler>
-				<MakeCommands>
-					<Build command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 ATM_Concurency_IPC/fast"/>
-					<CompileFile command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="rebuild_cache">
-				<Option working_dir="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug"/>
+				<Option working_dir="/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
-					<CompileFile command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="C:/MinGW/bin/mingw32-make.exe -f &quot;C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="ATM_Concurency_IPC">
+				<Option output="/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/ATM_Concurency_IPC" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 ATM_Concurency_IPC"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="ATM_Concurency_IPC/fast">
+				<Option output="/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/ATM_Concurency_IPC" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 ATM_Concurency_IPC/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/main.c">
+		<Unit filename="/home/benni/CLionProjects/ATM_Concurency_IPC/main.c">
 			<Option target="ATM_Concurency_IPC"/>
 		</Unit>
-		<Unit filename="C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/CMakeLists.txt">
+		<Unit filename="/home/benni/CLionProjects/ATM_Concurency_IPC/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>
 	</Project>

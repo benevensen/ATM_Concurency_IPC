@@ -1,9 +1,7 @@
 file(REMOVE_RECURSE
-  "ATM_Concurency_IPC.exe"
-  "ATM_Concurency_IPC.exe.manifest"
+  "ATM_Concurency_IPC"
   "ATM_Concurency_IPC.pdb"
-  "CMakeFiles/ATM_Concurency_IPC.dir/main.c.obj"
-  "libATM_Concurency_IPC.dll.a"
+  "CMakeFiles/ATM_Concurency_IPC.dir/main.c.o"
 )
 
 # Per-language clean rules from dependency scanning.

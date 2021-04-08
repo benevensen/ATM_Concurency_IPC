@@ -1,3 +1,1 @@
-"C:\Program Files\JetBrains\CLion 2020.3.2\bin\cmake\win\bin\cmake.exe" -E rm -f CMakeFiles\ATM_Concurency_IPC.dir/objects.a
-C:\MinGW\bin\ar.exe cr CMakeFiles\ATM_Concurency_IPC.dir/objects.a @CMakeFiles\ATM_Concurency_IPC.dir\objects1.rsp
-C:\MinGW\bin\gcc.exe -g   -Wl,--whole-archive CMakeFiles\ATM_Concurency_IPC.dir/objects.a -Wl,--no-whole-archive  -o ATM_Concurency_IPC.exe -Wl,--out-implib,libATM_Concurency_IPC.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\ATM_Concurency_IPC.dir\linklibs.rsp
+/usr/bin/cc -g CMakeFiles/ATM_Concurency_IPC.dir/main.c.o -o ATM_Concurency_IPC 
