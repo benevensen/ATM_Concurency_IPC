@@ -86,3 +86,8 @@ int main() {
  * 3. https://www.thegeekstuff.com/2012/05/c-mutex-examples/
  * 4. https://www.thegeekstuff.com/2012/05/c-mutex-examples/
  * */
+
+/*
+ * NOTES:-
+ * - Still need a message queue, not sure how to implement
+ * */
