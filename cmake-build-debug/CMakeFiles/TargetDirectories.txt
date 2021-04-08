@@ -1,0 +1,3 @@
+C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/CMakeFiles/ATM_Concurency_IPC.dir
+C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/cmake-build-debug/CMakeFiles/rebuild_cache.dir
