@@ -17,23 +17,27 @@
 #define ERROR_HANDLER(MSG) \
     do { perror(MSG); exit(EXIT_FAILURE); } while(0)
 
-///*
-// * Struct for information about the thread; succeeds thread_start()
-// * */
-//typedef struct THREAD_INFO{
-//    pthread_t THREAD_ID;        // The ID returned by the pthread_create()
-//    int THREAD_NUMBER;          // The number assigned to the thread by the system
-//}THREAD_INFO;
-//
-//THREAD_INFO DB_SERVER_THREAD_INFO;      // Housing info on the DB server thread
-//THREAD_INFO DB_EDITOR_THREAD_INFO;      // Housing the info on the DB editor thread
-//THREAD_INFO ATM_THREAD_INFO;            // Housing the info on the ATM thread
+/*
+ * Struct for information about the thread; succeeds thread_start()
+ * */
+typedef struct THREAD_INFO{
+    pthread_t THREAD_ID;        // The ID returned by the pthread_create()
+    int THREAD_NUMBER;          // The number assigned to the thread by the system
+}THREAD_INFO;
 
-pthread_t ATM_THREAD;
-pthread_t DB_EDITOR_THREAD;
-pthread_t DB_SERVER_THREAD;
+THREAD_INFO DB_SERVER_THREAD_INFO;      // Housing info on the DB server thread
+THREAD_INFO DB_EDITOR_THREAD_INFO;      // Housing the info on the DB editor thread
+THREAD_INFO ATM_THREAD_INFO;            // Housing the info on the ATM thread
 
-pthread_mutex_t LOCK;                   // Lock for resources
+pthread_t ATM_THREAD;                           // Thread for the ATM
+pthread_t DB_EDITOR_THREAD;                     // DB editor thread
+pthread_t DB_SERVER_THREAD;                     // DB server thread
+
+pthread_mutex_t RESOURCE_LOCK;                   // Lock for resources
+
+pthread_mutex_t PRINT_LOCK;                     // Lock for printing
+pthread_mutex_t READWRITE_LOCK;                 // Lock for read/write processes
+pthread_mutex_t DB_EDITOR_LOCK;                 // Lock for the DB starting
 
 
 /* ========================== STRUCT PREREQUISITES ========================== */
@@ -65,8 +69,8 @@ typedef struct DATABASE_RESPONSE_STRUCT{
 
 
 /* ========================== QUEUE PREREQUISITES ========================== */
-#define DATABASE "/database.db";                        // Database file name (reference 5.)
-#define MOCK_DATABASE "/mock_database.db";              // Temporary database file name
+#define DATABASE "../atm_database.txt";                   // Database file name
+#define MOCK_DATABASE "../mock_atm_database.txt";              // Temporary database file name
 
 #define PIN_MSG_QUEUE "/pin_msg_queue";                 // The queue for the PIN's (reference 5.)
 #define PIN_MSG_QUEUE_MAX 16;                           // Maximum number of PIN messages
@@ -76,16 +80,20 @@ typedef struct DATABASE_RESPONSE_STRUCT{
 #define DB_MSG_QUEUE_MAX 16;                            // Maximum number of DB messages
 #define DB_MSG_QUEUE_SIZE sizeof(DB_RESPONSE_STRUCT)    // The length of a DB message
 
+static struct mq_attr MQ_ATTR;                          // Message queue attribute representative struct
+static mqd_t PIN_MSG = 0;                               // Call to message queue function mq_open (reference 6.)
+static mqd_t DB_MSG = 0;
+
 
 
 /* ========================== RESOURCE PREREQUISITES & OTHER ========================== */
 /*
  * Method to facilitate synchronization between threads on shared resources (reference 4.)
  * */
-void RESOURCE_LOCK_PRINT(char MSG[]){
-    pthread_mutex_lock(&LOCK);
+void RESOURCE_LOCK_PRINT(char* MSG){
+    pthread_mutex_lock(&RESOURCE_LOCK);
     printf(MSG);
-    pthread_mutex_unlock(&LOCK);
+    pthread_mutex_unlock(&RESOURCE_LOCK);
 }
 
 /*
@@ -104,18 +112,102 @@ int EQUALITY_CHECK(char *ARR1, char *ARR2, int LENGTH){
  * Method for handling the signal inputs from the user. The user wishes to quit
  * the application
  * */
-SIGNAL_HANDLER(int SIGNAL_NUMBER){
+void SIGNAL_HANDLER(int SIGNAL_NUMBER){
     printf("\nSIGNAL RECEIVED:- %d \nSTOPPING THREADS...", SIGNAL_NUMBER);
 
 //    pthread_cancel(ATM_THREAD);              // Stopping the ATM thread           NEED TO FIRST RUN ATM; DB_EDITOR; AND DB_SERVER
 //    pthread_cancel(DB_EDITOR_THREAD);        // Stopping the DB editor thread
 //    pthread_cancel(DB_SERVER_THREAD);        // Stopping the DB server thread
+
+//    mq_close(PIN_MSG);
+//    mq_unlink(PIN_MSG_NAME);
+//    mq_close(DB_MSG);
+//    mq_unlink(DB_MSG_NAME);
 };
 
+bool ACCOUNT_VALIDATE(){
+    char GIVEN_ACCOUNT_NUMBER[5];
+    char DB_ACCOUNT_NUMBER[5];
+    bool status = false;
+
+    RESOURCE_LOCK_PRINT("Kindly enter your account number:- ");       // Prompt user to enter account number
+    scanf("%s", GIVEN_ACCOUNT_NUMBER);                              // Scan for user submissison
+
+    // Opening the database with a read request
+    FILE *fp = fopen("atm_database.txt", "r");
+    if (fp == NULL) {
+        ERROR_HANDLER("File cannot be opened");
+    }
+
+    // Looking for the account number provided by the user
+    while (fgets(DB_ACCOUNT_NUMBER, sizeof(DB_ACCOUNT_NUMBER), fp)) {
+        if (strstr(DB_ACCOUNT_NUMBER, GIVEN_ACCOUNT_NUMBER)) {
+            status = true;
+        }
+    }
+    fclose(fp);
+    return status;
+}
+
+bool PIN_VALIDATE(){
+    char GIVEN_PIN[3];
+    char DB_PIN[3];
+    bool status = false;
+
+    RESOURCE_LOCK_PRINT("Kindly enter your PIN:- ");       // Prompt user to enter PIN
+    scanf("%s", GIVEN_PIN);                              // Scan for user submissison
+
+    // Opening the database with a read request
+    FILE *fp = fopen("atm_database.txt", "r");
+    if (fp == NULL) {
+        ERROR_HANDLER("File cannot be opened");
+    }
+
+    // Looking for the account number provided by the user
+    while (fgets(DB_PIN, sizeof(DB_PIN), fp)) {
+        if (strstr(DB_PIN, GIVEN_PIN)) {
+            status = true;
+        }
+    }
+    fclose(fp);
+    return status;
+}
 
 
 int main() {
-    printf("Hello world!");
+
+}
+
+void ATM_START(){
+    PIN_MSG_STRUCT SEND_MSG, RECEIVE_MSG;   // Declaring the message structs for the message to be sent and received
+
+    bool SIGNAL;                            // Signal represents the feedback from the message queue
+    char ACCOUNT_NUMBER[5];                 // The account number given by the user
+    char PIN[3];                            // The PIN given by the user
+
+    int REMAINING_PIN_TRIES = 3;                      // Number of invalid PIN entries by the user
+
+    RESOURCE_LOCK_PRINT("<=======================> ATM <=======================>");
+
+    do {
+        switch (ACCOUNT_VALIDATE()) {
+            case true:
+                RESOURCE_LOCK_PRINT("\nAccount found\n");
+                SIGNAL = PIN_VALIDATE();
+                while(!SIGNAL){                // If the PIN is not found
+                    if (REMAINING_PIN_TRIES == 0) {
+                        ERROR_HANDLER("PIN wrong three times; exiting");
+                    }
+
+                    RESOURCE_LOCK_PRINT("\n\nIncorrect PIN ");                      // May be a source of error (passing REMAINING_... into RLP)
+                    RESOURCE_LOCK_PRINT(REMAINING_PIN_TRIES + " tries left.\n");
+
+                    REMAINING_PIN_TRIES -= 1;
+                }
+
+        }
+    } while (0);
+
 }
 
 /*
