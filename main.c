@@ -13,6 +13,12 @@
 #include<time.h>
 
 
+/* ========================== QUEUE PREREQUISITES ========================== */
+#define ACCOUNT_NUMBER_SIZE 5
+#define PIN_NUMBER_SIZE 3
+#define DB_RESPONSE_SIZE 8
+#define MAX_QUEUE_MSG_SIZE 16
+
 /* ========================== THREAD PREREQUISITES ========================== */
 #define ERROR_HANDLER(MSG) \
     do { perror(MSG); exit(EXIT_FAILURE); } while(0)
@@ -63,26 +69,11 @@ typedef struct BANKING_MSG_STRUCT{
  * The response struct returned by the database when it is
  * sent one of the above MSG_STRUCT's
  * */
-typedef struct DATABASE_RESPONSE_STRUCT{
-    char RESPONSE[9];                       // The response must be no more than 9 chars
-}DATABASE_RESPONSE_STRUCT;
+typedef struct RCV_MSG_STRUCT{
+    char RESPONSE[DB_RESPONSE_SIZE];                       // The response must be no more than 9 chars
+}RCV_MSG_STRUCT;
+#define RCV_MSG_STRUCT_SIZE sizeof(RCV_MSG_STRUCT);
 
-
-/* ========================== QUEUE PREREQUISITES ========================== */
-#define DATABASE "../atm_database.txt";                   // Database file name
-#define MOCK_DATABASE "../mock_atm_database.txt";              // Temporary database file name
-
-#define PIN_MSG_QUEUE "/pin_msg_queue";                 // The queue for the PIN's (reference 5.)
-#define PIN_MSG_QUEUE_MAX 16;                           // Maximum number of PIN messages
-#define PIN_MSG_QUEUE_SIZE sizeof(PIN_MSG_STRUCT);      // The length of a PIN message
-
-#define DB_MSG_QUEUE "/database_msg_queue";             // The queue for the database response messages (reference 5.)
-#define DB_MSG_QUEUE_MAX 16;                            // Maximum number of DB messages
-#define DB_MSG_QUEUE_SIZE sizeof(DB_RESPONSE_STRUCT)    // The length of a DB message
-
-static struct mq_attr MQ_ATTR;                          // Message queue attribute representative struct
-static mqd_t PIN_MSG = 0;                               // Call to message queue function mq_open (reference 6.)
-static mqd_t DB_MSG = 0;
 
 
 
