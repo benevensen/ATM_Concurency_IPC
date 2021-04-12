@@ -1,16 +1,7 @@
 #include<stdio.h>
 #include<string.h>
-#include<pthread.h>
 #include<stdlib.h>
-#include<unistd.h>
 #include<mqueue.h>
-#include<errno.h>
-#include<fcntl.h>
-#include<sys/stat.h>
-#include<sys/types.h>
-#include<signal.h>
-#include<stdbool.h>
-#include<time.h>
 
 
 /* ========================== QUEUE PREREQUISITES ========================== */
@@ -19,50 +10,27 @@
 #define DB_RESPONSE_SIZE 8
 #define MAX_QUEUE_MSG_SIZE 16
 
-/* ========================== THREAD PREREQUISITES ========================== */
-#define ERROR_HANDLER(MSG) \
-    do { perror(MSG); exit(EXIT_FAILURE); } while(0)
-
-/*
- * Struct for information about the thread; succeeds thread_start()
- * */
-typedef struct THREAD_INFO{
-    pthread_t THREAD_ID;        // The ID returned by the pthread_create()
-    int THREAD_NUMBER;          // The number assigned to the thread by the system
-}THREAD_INFO;
-
-THREAD_INFO DB_SERVER_THREAD_INFO;      // Housing info on the DB server thread
-THREAD_INFO DB_EDITOR_THREAD_INFO;      // Housing the info on the DB editor thread
-THREAD_INFO ATM_THREAD_INFO;            // Housing the info on the ATM thread
-
-pthread_t ATM_THREAD;                           // Thread for the ATM
-pthread_t DB_EDITOR_THREAD;                     // DB editor thread
-pthread_t DB_SERVER_THREAD;                     // DB server thread
-
-pthread_mutex_t RESOURCE_LOCK;                   // Lock for resources
-
-pthread_mutex_t PRINT_LOCK;                     // Lock for printing
-pthread_mutex_t READWRITE_LOCK;                 // Lock for read/write processes
-pthread_mutex_t DB_EDITOR_LOCK;                 // Lock for the DB starting
-
 
 /* ========================== STRUCT PREREQUISITES ========================== */
 /*
  * The PIN and account number struct to be transmitted to the
  * DB upon submission from the client.
  * */
-typedef struct PIN_MSG_STRUCT{
+typedef struct SEND_MSG_STRUCT{
     char PIN_NUMBER[3];         // The client's PIN
     char ACCOUNT_NUMBER[5];     // The client's account number
-} PIN_MSG_STRUCT;
+} SEND_MSG_STRUCT;
+static mqd_t SEND_DESTINATION = -1;
+static mqd_t RCV_DESTINATION = -1;
 
 /*
  * The banking request struct to be transmitted to the
  * DB when the user selects their needed service
  * */
 typedef struct BANKING_MSG_STRUCT{
-    bool BALANCE_REQUEST, WITHDRAW_REQUEST;     // Only the requested banking service will have a corresponding value of 1
-    float WITHDRAW_AMOUNT;                      // For a withdrawal service; the user-provided withdrawal amount is a float
+    char BALANCE_REQUEST[15];
+    char WITHDRAW_REQUEST[16];     // Only the requested banking service will have a corresponding value of 1
+    char WITHDRAW_AMOUNT;                      // For a withdrawal service; the user-provided withdrawal amount is a float
 } BANKING_MSG_STRUCT;
 
 /*
@@ -72,20 +40,10 @@ typedef struct BANKING_MSG_STRUCT{
 typedef struct RCV_MSG_STRUCT{
     char RESPONSE[DB_RESPONSE_SIZE];                       // The response must be no more than 9 chars
 }RCV_MSG_STRUCT;
-#define RCV_MSG_STRUCT_SIZE sizeof(RCV_MSG_STRUCT);
-
-
 
 
 /* ========================== RESOURCE PREREQUISITES & OTHER ========================== */
 /*
- * Method to facilitate synchronization between threads on shared resources (reference 4.)
- * */
-void RESOURCE_LOCK_PRINT(char* MSG){
-    pthread_mutex_lock(&RESOURCE_LOCK);
-    printf(MSG);
-    pthread_mutex_unlock(&RESOURCE_LOCK);
-}
 
 /*
  * Method to check the equality of two arrays; 1 if equal, 0 otherwise
@@ -99,107 +57,107 @@ int EQUALITY_CHECK(char *ARR1, char *ARR2, int LENGTH){
     return 1;                               // They are equal; return 1
 }
 
-/*
- * Method for handling the signal inputs from the user. The user wishes to quit
- * the application
- * */
-void SIGNAL_HANDLER(int SIGNAL_NUMBER){
-    printf("\nSIGNAL RECEIVED:- %d \nSTOPPING THREADS...", SIGNAL_NUMBER);
+void ATM_START() {
 
-//    pthread_cancel(ATM_THREAD);              // Stopping the ATM thread           NEED TO FIRST RUN ATM; DB_EDITOR; AND DB_SERVER
-//    pthread_cancel(DB_EDITOR_THREAD);        // Stopping the DB editor thread
-//    pthread_cancel(DB_SERVER_THREAD);        // Stopping the DB server thread
+    int ATTEMPTS_REMAINING = 3;         // How many attempts the user has left
+    int status;                         // Represents the status when sending and receiving on the message queue
+    char ACCOUNT_NUM[5];                // User given account number
+    char PIN[3];                        // User given PIN
 
-//    mq_close(PIN_MSG);
-//    mq_unlink(PIN_MSG_NAME);
-//    mq_close(DB_MSG);
-//    mq_unlink(DB_MSG_NAME);
-};
+    SEND_MSG_STRUCT SEND_MSG;            // Sends PIN and account number to DB
+    RCV_MSG_STRUCT RCV_MSG;             // Receives the response from the DB
 
-bool ACCOUNT_VALIDATE(){
-    char GIVEN_ACCOUNT_NUMBER[5];
-    char DB_ACCOUNT_NUMBER[5];
-    bool status = false;
+    printf("<=====================> ATM <=====================>");
 
-    RESOURCE_LOCK_PRINT("Kindly enter your account number:- ");       // Prompt user to enter account number
-    scanf("%s", GIVEN_ACCOUNT_NUMBER);                              // Scan for user submissison
+    do {
+        printf("Kindly enter your account number:- ");
+        scanf("%c", ACCOUNT_NUM);
+        printf("\nKindly enter you PIN:- ");
+        scanf("%c", PIN);
 
-    // Opening the database with a read request
-    FILE *fp = fopen("atm_database.txt", "r");
-    if (fp == NULL) {
-        ERROR_HANDLER("File cannot be opened");
-    }
-
-    // Looking for the account number provided by the user
-    while (fgets(DB_ACCOUNT_NUMBER, sizeof(DB_ACCOUNT_NUMBER), fp)) {
-        if (strstr(DB_ACCOUNT_NUMBER, GIVEN_ACCOUNT_NUMBER)) {
-            status = true;
+        for (int i = 0; i < 5; ++i) {                       // Making the account number in the struct equal to the user-given account number
+            SEND_MSG.ACCOUNT_NUMBER[i] = ACCOUNT_NUM[i];
         }
-    }
-    fclose(fp);
-    return status;
-}
-
-bool PIN_VALIDATE(){
-    char GIVEN_PIN[3];
-    char DB_PIN[3];
-    bool status = false;
-
-    RESOURCE_LOCK_PRINT("Kindly enter your PIN:- ");       // Prompt user to enter PIN
-    scanf("%s", GIVEN_PIN);                              // Scan for user submissison
-
-    // Opening the database with a read request
-    FILE *fp = fopen("atm_database.txt", "r");
-    if (fp == NULL) {
-        ERROR_HANDLER("File cannot be opened");
-    }
-
-    // Looking for the account number provided by the user
-    while (fgets(DB_PIN, sizeof(DB_PIN), fp)) {
-        if (strstr(DB_PIN, GIVEN_PIN)) {
-            status = true;
+        for (int i = 0; i < 3; ++i) {                       // Making the PIN in the struct equal to the user-given PIN
+            SEND_MSG.PIN_NUMBER[i] = PIN[i];
         }
-    }
-    fclose(fp);
-    return status;
+
+        status = mq_send(SEND_DESTINATION, (const char*) &ACCOUNT_NUM, sizeof(ACCOUNT_NUM),
+                         1);    // Sending the SEND struct; contains PIN and account number
+        if (status < 0) {               // If the returned status is -1 there is an error
+            printf("PIN message cannot send");
+            exit(EXIT_FAILURE);
+        }
+
+        status = mq_receive(RCV_DESTINATION, (char *) &RCV_MSG, sizeof(RCV_MSG), 0);       // Receiving the DB struct; contains response
+        if (status < 0) {           // If the returned status is -1 there is an error
+            printf("DB message cannot be received");
+            exit(EXIT_FAILURE);
+        }
+
+        // If we receive the "OK" from the DB we may proceed to selection
+        if (EQUALITY_CHECK(RCV_MSG.RESPONSE, "OK", 4)) {
+            char SELECTION[8];                  // Ther user-given operation selection
+            BANKING_MSG_STRUCT BANKING_MSG;     // Struct containing the information regarding the selection ("BALANCE", "WITHDRAW" and the amount).
+
+            printf("Kindly type your service:- \"BALANCE\" or \"WITHDRAW\"\n");
+            do {
+                scanf("%c", SELECTION);
+
+                // If its a BALANCE request
+                if (EQUALITY_CHECK(SELECTION, "BALANCE", 7)) {
+                    memcpy(BANKING_MSG.BALANCE_REQUEST, "BALANCE_REQUEST", 15);                         // Copies the request into the BALANCE_REQUEST field
+                    mq_send(SEND_DESTINATION, (const char*) &BANKING_MSG, sizeof(BANKING_MSG), 1);      // Sends the BALANCE request to the DB
+                    mq_receive(SEND_DESTINATION, (char*) &BANKING_MSG, sizeof(BANKING_MSG), 0);         // Receives the response from the DB
+                    printf("\nCurrent balance:- $%s", BANKING_MSG.BALANCE_REQUEST);
+                    break;
+                }
+
+                // If its a WITHDRAW request
+                else if (EQUALITY_CHECK(SELECTION, "WITHDRAW", 8)) {
+                    double AMOUNT;                                                                              // The amount to withdraw
+                    printf("\nKindly enter the amount to withdraw (CAD assumed):- ");
+                    scanf("%lf", &AMOUNT);
+                    memcpy(BANKING_MSG.WITHDRAW_REQUEST, "WITHDRAW_REQUEST", 16);                       // Copies the request into the WITHDRAW_REQUEST
+                    memcpy(BANKING_MSG.WITHDRAW_AMOUNT, &AMOUNT, 16);                                       // Copies the amount in the WITHDRAW_AMOUNT
+                    mq_send(SEND_DESTINATION, (const char*) &BANKING_MSG, sizeof(BANKING_MSG), 1);      // Sends the WITHDRAW request to the DB
+                    mq_receive(SEND_DESTINATION, (char*) &BANKING_MSG, sizeof(BANKING_MSG), 0);         // Receives the response from the DB
+
+                    // If there is insufficient funds in the account
+                    if (EQUALITY_CHECK(RCV_MSG.RESPONSE, "NSF", 3)) {
+                        printf("\nInsufficient funds\n");
+                    }
+
+                    // If there is sufficient funds in the account
+                    else if (EQUALITY_CHECK(RCV_MSG.RESPONSE, "FUNDS_OK", 8)) {
+                        printf("\nCurrent balance:- $%f",
+                               BANKING_MSG.BALANCE_REQUEST);        // Print balance - withdrawal
+                    }
+                    break;
+                }
+
+            } while (0);
+        }
+
+        // If the user inputs the wrong accont or PIN; dock them an attempt
+        else {
+            printf("\nIncorrect account or PIN\n");
+            ATTEMPTS_REMAINING -= 1;
+
+            // If they are out of attempts; exit (what we chose to do)
+            if (ATTEMPTS_REMAINING <= 0){
+                printf("\nAccount is locked\n");
+                exit(EXIT_FAILURE);                         // Not specified if should exit
+            }
+        }
+    } while (0);
 }
 
 
 int main() {
-
+    ATM_START();
 }
 
-void ATM_START(){
-    PIN_MSG_STRUCT SEND_MSG, RECEIVE_MSG;   // Declaring the message structs for the message to be sent and received
-
-    bool SIGNAL;                            // Signal represents the feedback from the message queue
-    char ACCOUNT_NUMBER[5];                 // The account number given by the user
-    char PIN[3];                            // The PIN given by the user
-
-    int REMAINING_PIN_TRIES = 3;                      // Number of invalid PIN entries by the user
-
-    RESOURCE_LOCK_PRINT("<=======================> ATM <=======================>");
-
-    do {
-        switch (ACCOUNT_VALIDATE()) {
-            case true:
-                RESOURCE_LOCK_PRINT("\nAccount found\n");
-                SIGNAL = PIN_VALIDATE();
-                while(!SIGNAL){                // If the PIN is not found
-                    if (REMAINING_PIN_TRIES == 0) {
-                        ERROR_HANDLER("PIN wrong three times; exiting");
-                    }
-
-                    RESOURCE_LOCK_PRINT("\n\nIncorrect PIN ");                      // May be a source of error (passing REMAINING_... into RLP)
-                    RESOURCE_LOCK_PRINT(REMAINING_PIN_TRIES + " tries left.\n");
-
-                    REMAINING_PIN_TRIES -= 1;
-                }
-
-        }
-    } while (0);
-
-}
 
 /*
  * REFERENCES:-
