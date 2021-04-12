@@ -44,7 +44,6 @@ typedef struct RCV_MSG_STRUCT{
 
 /* ========================== RESOURCE PREREQUISITES & OTHER ========================== */
 /*
-
 /*
  * Method to check the equality of two arrays; 1 if equal, 0 otherwise
  * */
