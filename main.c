@@ -50,6 +50,28 @@ int EQUALITY_CHECK(char *ARR1, char *ARR2, int LENGTH){
     return 1;                               // They are equal; return 1
 }
 
+void start_child_process(const char * programFilePath, int msgID){
+
+    pid_t pid;
+
+    pid = fork();
+
+    if(pid < 0){
+        perror("fork failed");
+        exit(1);
+    }else if (pid == 0){ //child process
+
+        char numArg[8];
+
+        sprintf(numArg, "%d", msgKey);
+
+        execlp(programFilePath,numArg, NULL);
+
+    }
+
+}
+
+
 /*
  * Method to start the ATM system
  * */
@@ -62,12 +84,14 @@ void ATM_START() {
     semInit(semID);
 
 
-    int msgID = getmsgQueueID();     //
+    int msgID = getmsgQueueID();     // Getting the message queue id
     int attempts = 3;               // How many attempts the user has left
     int status;                     // Represents the status when sending and receiving on the message queue
 
+    start_child_process("./DBserver", msgID);   // Forking the child process
+
     int accountNumber = -1;          // User given account number
-    int accountPIN = 1;                    // User given PIN
+    int accountPIN = 1;              // User given PIN
     int balance = -1.0;
 
     char response;
@@ -208,6 +232,7 @@ void ATM_START() {
         } */
 
     } while (0);
+    wait(NULL);
 }
 
 
