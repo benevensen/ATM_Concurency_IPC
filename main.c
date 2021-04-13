@@ -1,10 +1,10 @@
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
-#include<mqueue.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
 #include "extra_file.h"
 #include "DBserver.h"
 
@@ -33,33 +33,10 @@ int getUserInput(char *message){
 
 };
 
-/**
- * Function that gets user input in the form of an float. Returns -1 if there is an error, otherwise returns an integer.
- * Special case: if user inputs x, returns -2.
- *
- * paramater is a char array which will be displayed to the user.
- */
-float getUserInputFloat(char *message){
-    char buffer[10];
-    int result;
-
-    puts(message);
-
-    fgets(buffer,10,stdin);
-
-    if(strncmp(buffer,"x",1) == 0){
-        return -2;
-    }else if((result = atof(buffer) == -1)){
-        return -1;
-    }
-
-    return result;
-
-};
 
 
 /* ========================== RESOURCE PREREQUISITES & OTHER ========================== */
-/*
+
 
 /*
  * Method to check the equality of two arrays; 1 if equal, 0 otherwise
@@ -81,14 +58,16 @@ void ATM_START() {
     GenericMessage sendingMessage;
     GenericMessage receivingMessage;
 
-    Mailbox *mailbox;
+    int semID = getSemId();
+    semInit(semID);
+
 
     int msgID = getmsgQueueID();     //
     int attempts = 3;               // How many attempts the user has left
     int status;                     // Represents the status when sending and receiving on the message queue
 
     int accountNumber = -1;          // User given account number
-    int PIN = 1;                    // User given PIN
+    int accountPIN = 1;                    // User given PIN
     int balance = -1.0;
 
     char response;
@@ -106,24 +85,33 @@ void ATM_START() {
     /* Keeping the ATM running */
     do {
         /* Getting the account number and account number from the user*/
-        printf("Kindly enter your account number:- %d\n", accountNumber);
-        printf("Kindly enter you PIN:- %d\n", PIN);
+        accountNumber = getUserInput("Kindly enter your account number:\n");
+        accountPIN = getUserInput("Kindly enter you PIN:\n");
+
+        //enter the critical section
+        SemaphoreWait(semID, BLOCK );
+
+        resetDataBundle(&sendingMessage.data);
 
         /* Making the account number in the struct equal to the user-given account number */
         sendingMessage.data.account.accountNumber = accountNumber;
 
         /* Making the PIN in the struct equal to the user-given PIN */
-        sendingMessage.data.account.pin = PIN;
+        sendingMessage.data.account.pin = accountPIN;
+
+        sendingMessage.data.type.message = PIN;
 
         status = sendMessage(msgID, sendingMessage, NOBLOCK);           // Sending the SEND struct; contains PIN and account number
-
         /* If the returned status is -1 there is an error in sending the message to the DB*/
         if (status < 0) {
             printf("Message cannot send");
             exit(EXIT_FAILURE);
         }
 
-        status = receiveMessage(msgID, &receivingMessage, NOBLOCK);     // Receiving the DB struct; contains response
+        resetDataBundle(&sendingMessage.data);
+
+
+        status = receiveMessage(msgID, &receivingMessage, BLOCK);     // Receiving the DB struct; contains response
 
         /* If the returned status is -1 there is an error in receiving the message from the DB */
         if (status < 0) {
@@ -131,59 +119,94 @@ void ATM_START() {
             exit(EXIT_FAILURE);
         }
 
+        //exit the critical section
+        SemaphoreSignal(semID);
+
         response = receivingMessage.data.response;
+        
         /* If we receive the "OK" from the DB we may proceed to selection */
-        if (EQUALITY_CHECK(&response, "OK", 2)) {
-            char selection[8];                                                                          // The selection (can either be "BALANCE", or "WITHDRAW")
+        
+        if(response == PIN_WRONG){
 
-            /* If the user wishes to have multiple requests we can do this with a loop */
-            do {
-                printf("Kindly enter your service; \"BALANCE\" or \"WITHDRAW\":- %s\n", selection);
+            // if the pin or account is wrong, it will request information from the user again
+            continue;
+        }else if (response == OK) {
+            char selection[10];                                                                          // The selection (can either be "BALANCE", or "WITHDRAW")
+            int choice = 0;
+            /* users will only be able to do 1 banking operation*/ 
 
-                /* If its a BALANCE request */
-                if (EQUALITY_CHECK(selection, "BALANCE", 7)) {
-                    sendingMessage.message_type = BALANCE;
-                    sendMessage(msgID, sendingMessage, NOBLOCK);
-                    receiveMessage(msgID, &receivingMessage, NOBLOCK);
-                    printf("\nCurrent balance:- $%f", receivingMessage.data.account.funds);
-                    break;
+            // if the user enters invalid input, the system will keep requesting a proper operation           
+            do
+            {
+                puts("Kindly enter your service; \"BALANCE (b) \" or \"WITHDRAW (w)\":\n");
+                fgets(selection,10,stdin);
+            } while (strncmp(selection,"b",1) != 0 && strncmp(selection,"w",1));
+            
+            resetDataBundle(&sendingMessage.data);
+
+            /* If its a BALANCE request */
+            if (strncmp(selection,"b",1)) {
+
+                choice = 1;
+                sendingMessage.data.type.message = BALANCE;
+            }
+
+            /* If its a WITHDRAW request */
+            else if (strncmp(selection,"w",1)) {
+
+                choice = 2;
+
+                float AMOUNT;                                                                      // The amount to withdraw
+                printf("\nKindly enter the amount to withdraw (CAD assumed):- ");
+                scanf("%f", &AMOUNT);
+
+                sendingMessage.data.type.message = WITHDRAW;
+                sendingMessage.data.account.funds = AMOUNT;
+               
+            }
+
+            resetDataBundle(&receivingMessage.data);
+            
+            //enter the critical section
+            SemaphoreWait(semID, BLOCK);
+
+            sendMessage(msgID, sendingMessage, NOBLOCK);
+            receiveMessage(msgID, &receivingMessage, BLOCK);
+
+            //enter the critical section
+            SemaphoreSignal(semID);
+
+
+            if(choice == 1){
+                printf("\nCurrent balance:- $%f", receivingMessage.data.account.funds);
+            }else{
+
+                if(receivingMessage.data.response == NSF){
+                    printf("\nInsufficient funds\n");
+                }else if(receivingMessage.data.response == FUNDS_OK){
+                    printf("\nNew balance:- $%f", receivingMessage.data.account.funds);       // Receives the response from the DB
+                }else{
+                    perror("Unknown message received from the DB Server");
                 }
 
-                /* If its a WITHDRAW request */
-                else if (EQUALITY_CHECK(selection, "WITHDRAW", 8)) {
-                    double AMOUNT;                                                                      // The amount to withdraw
-                    sendingMessage.message_type = WITHDRAW;
-                    printf("\nKindly enter the amount to withdraw (CAD assumed):- ");
-                    scanf("%lf", &AMOUNT);
-                    sendMessage(msgID, sendingMessage, NOBLOCK);
-                    receiveMessage(msgID, &receivingMessage, NOBLOCK);
-                    printf("\nCurrent balance:- $%f", receivingMessage.data.account.funds);       // Receives the response from the DB
+            }
 
-                    response = receivingMessage.data.response;
-                    /* If there is insufficient funds in the account */
-                    if (EQUALITY_CHECK(&response, "NSF", 3)) {
-                        printf("\nInsufficient funds\n");
-                    }
-                    /* If there is sufficient funds in the account */
-                    else if (EQUALITY_CHECK(&response, "FUNDS_OK", 8)) {
-                        printf("\nCurrent balance:- $%f", receivingMessage.data.account.funds);        // Print balance minus withdrawal
-                    }
-                    break;
-                }
-            } while (0);
+        }else{
+            perror("Received unknown message from DB");
         }
 
         /* If the user inputs the wrong account or PIN; dock them an attempt */
-        else {
+        /* else {
             printf("\nIncorrect account or PIN\n");
-            attempts -= 1;
+            attempts -= 1; */
 
             /* If they are out of attempts; exit (what we chose to do) */
-            if (attempts <= 0){
+           /*  if (attempts <= 0){
                 printf("\nAccount is locked\n");
                 exit(EXIT_FAILURE);                         // Not specified if should exit
             }
-        }
+        } */
+
     } while (0);
 }
 
