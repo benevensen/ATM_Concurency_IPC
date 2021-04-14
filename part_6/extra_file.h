@@ -16,7 +16,7 @@ const int msgKey = 99999;
 const int BLOCK = 1;
 const int NOBLOCK = -1;
 
-
+// Shared resource
 typedef union sharedVar
 {
     char character;
@@ -154,6 +154,9 @@ int SemaphoreWait(int semid, int iMayBlock)
     return semop(semid, &sbOperation, 1);
 }
 
+/*
+ *
+ * */
 int SemaphoreWaitNthSemInSet(int semid, int iMayBlock, int n)
 {
     int flag;
@@ -171,6 +174,9 @@ int SemaphoreWaitNthSemInSet(int semid, int iMayBlock, int n)
     return semop(semid, &sbOperation, 1);
 }
 
+/*
+ * Method for ensuring a specific semaphore is using wait() (atomic)
+ * */
 int SemaphoreWaitUntilZero(int semid)
 {
     struct sembuf sbOperation;
@@ -180,7 +186,9 @@ int SemaphoreWaitUntilZero(int semid)
     return semop(semid, &sbOperation, 1);
 }
 
-
+/*
+ * Method for ensuring the wait() is set by the nth semaphore (atomic)
+ * */
 int SemaphoreWaitUntilZeroNthSemInSet(int semid, int n)
 {
     struct sembuf sbOperation;
@@ -190,6 +198,9 @@ int SemaphoreWaitUntilZeroNthSemInSet(int semid, int n)
     return semop(semid, &sbOperation, 1);
 }
 
+/*
+ * Method for returning the semaphore signal
+ * */
 int SemaphoreSignal(int semid)
 {
     struct sembuf sbOperation;
@@ -200,6 +211,9 @@ int SemaphoreSignal(int semid)
     return semop(semid, &sbOperation, 1);
 }
 
+/*
+ * Method for finding the nth semaphore in the set of semaphores
+ * */
 int SemaphoreSignalNthSemInSet(int semid, int n)
 {
     struct sembuf sbOperation;
@@ -210,14 +224,17 @@ int SemaphoreSignalNthSemInSet(int semid, int n)
     return semop(semid, &sbOperation, 1);
 }
 
-//Message queue interface
-
+/*
+ * Message queue interface struct
+ * */
 typedef struct my_message {
     long int message_type;
-
     int data;
 }my_message;
 
+/*
+ * Method for getting the message queue ID; needed since we are sending messages to a target
+ * */
 int getmsgQueueID(){
     int messageQueueId;
 
@@ -229,21 +246,14 @@ int getmsgQueueID(){
     return messageQueueId;
 }
 
-/* int getNewMsgQueueID(){
-    int messageQueueId;
-
-    if( (messageQueueId = msgget((key_t) IPC_PRIVATE, IPC_CREAT| 0600))  == -1 ){
-        perror( "Error in msgget");
-        exit(1);
-    }
-
-    return messageQueueId;
-} */
-
+/*
+ * Method for sending a message via the message queue to some destination
+ * */
 int sendMessage(int messageQueueId, my_message message, int shouldIBlockIfFull){
 
     int flag;
 
+    /* If the block is full set the flag to 0 (waiting needed); otherwise there is no waiting needed */
     if(shouldIBlockIfFull > 0){
         flag = 0;
     }else{
@@ -254,6 +264,7 @@ int sendMessage(int messageQueueId, my_message message, int shouldIBlockIfFull){
 
     int result;
 
+    /* If the result of sending a message is -1 there was an error; display that error to the user */
     if ( (result = msgsnd(messageQueueId, &message, (size_t) msgLength, flag) == -1))
     {
         perror("msgsnd: msgsnd failed");
@@ -263,6 +274,9 @@ int sendMessage(int messageQueueId, my_message message, int shouldIBlockIfFull){
    return result;
 }
 
+/*
+ * Method for receiving a message via the message queue from some destination
+ * */
 int receiveMessage(int messageQueueId, my_message *message, int shouldIBlockIfFull){
 
 
@@ -289,6 +303,9 @@ int receiveMessage(int messageQueueId, my_message *message, int shouldIBlockIfFu
    return result;
 }
 
+/*
+ * Method for removing the message queue
+ * */
 int deleteMessageQueue(int messageQueueId){
 
     int result; 

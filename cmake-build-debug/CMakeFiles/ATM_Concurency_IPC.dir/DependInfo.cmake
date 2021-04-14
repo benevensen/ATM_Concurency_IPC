@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/benni/CLionProjects/ATM_Concurency_IPC/main.c" "/home/benni/CLionProjects/ATM_Concurency_IPC/cmake-build-debug/CMakeFiles/ATM_Concurency_IPC.dir/main.c.o"
+  "C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/ATM_Concurency_IPC/main.c" "C:/Users/benni/OneDrive/Documents/01 Personal/Github/ATM_Concurency_IPC/ATM_Concurency_IPC/cmake-build-debug/CMakeFiles/ATM_Concurency_IPC.dir/main.c.obj"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 
