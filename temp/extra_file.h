@@ -172,7 +172,7 @@ int SemaphoreWaitNthSemInSet(int semid, int iMayBlock, int n)
     struct sembuf sbOperation;
     sbOperation.sem_num = n;
     sbOperation.sem_op = -1;
-    sbOperation.sem_flg = flag;
+    sbOperation.sem_flg = iMayBlock;
     return semop(semid, &sbOperation, 1);
 }
 
@@ -189,7 +189,7 @@ int SemaphoreWaitNthSemInSetWithBlock(int semid, int iMayBlock, int n)
     struct sembuf sbOperation;
     sbOperation.sem_num = n;
     sbOperation.sem_op = -2;
-    sbOperation.sem_flg = flag;
+    sbOperation.sem_flg = iMayBlock;
     return semop(semid, &sbOperation, 1);
 }
 
