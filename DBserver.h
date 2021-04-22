@@ -15,6 +15,7 @@ typedef struct Account{
     int accountNumber;
     int pin;
     float funds;
+    int isLocked;
 }Account;
 
 typedef enum ResponseType{

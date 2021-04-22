@@ -15,13 +15,13 @@ const char filename[20] = "DB_file.txt";
 
 void start_child_process(const char * programFilePath, int msgID);
 
-DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,DataBundle message, Account* accounts, int numberOfAccounts);
+DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,DataBundle message, Account** accounts, int numberOfAccounts);
 
 DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount);
 
 DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount);
 
-void Handle_UPDATE_DB(DataBundle message,  Account* accounts, int *numberOfAccounts);
+void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAccounts);
 
 
 
@@ -30,16 +30,23 @@ void Handle_UPDATE_DB(DataBundle message,  Account* accounts, int *numberOfAccou
 int getCountOfLinesInDBFile();
 
 Account* add_account_to_db(Account *accounts,int *numberOfAccounts, Account account);
-Account* remove_account_from_db(Account *accounts,int numberOfAccounts, int accountToRemove);
+void lock_account_in_db(Account *accounts,int numberOfAccounts, int accountToLock);
 
 
 int query_account_and_pin_in_db(Account *accounts,int numberOfAccounts,int account_number, int pin);
 float query_balance_in_db(Account *accounts,int numberOfAccounts,int account_number);
 int withdrawal_within_in_db(Account *accounts,int numberOfAccounts,int account_number, float funds_being_withdrawn);
+int query_account_in_db(Account *accounts,int numberOfAccounts,int account_number);
+void update_account_in_db(Account *accounts,int numberOfAccounts,Account account);
+
 
 Account* DB_INIT(const char *inputFile, int *numberOfAccounts);
 
-void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,int locked_account_number,const char *inputFile); // after a withdrawal, new account, or lock
+void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,const char *inputFile); // after a withdrawal, new account, or lock
+
+void print_current_Accounts_DB(Account *accounts,int numberOfAccounts, char *message);
+
+void print_current_Accounts_DB_pointer(Account *accounts, char *message);
 
 int main(int argc, char *argv[])
 {
@@ -48,7 +55,7 @@ int main(int argc, char *argv[])
 
     int msgID = getmsgQueueID();
 
-    if( argc == 1 ){
+    if( argc == 0 ){
 
         semInit(semID);
     
@@ -81,20 +88,13 @@ int main(int argc, char *argv[])
         accounts = (Account*) malloc(sizeof(Account));
     }
 
+    //print_current_Accounts_DB(accounts,numberOfAccounts, "Initial DB");
+
     while(1){
 
         resetDataBundle(&receivingMessage.data);
 
         receiveMessage(msgID, &receivingMessage, BLOCK);
-
-
-        puts("----------------------------------------------------");
-
-        puts("finished waiting");
-
-        printf("Account info received: account number %d \n", receivingMessage.data.account.accountNumber);
-        printf("Account info received: account Pin %d \n", receivingMessage.data.account.pin);
-        printf("Account info received: account funds %.5f \n", receivingMessage.data.account.funds);
 
 
         // if error or exit command then exit the loop
@@ -111,26 +111,27 @@ int main(int argc, char *argv[])
 
         message_received_message_type = receivingMessage.data.type.message;
 
+       /*  print_current_Accounts_DB(accounts,numberOfAccounts, "DB After receiving message"); */
+
         switch (message_received_message_type)
         {
         case PIN:
-            puts("received pin");
-            sendingData = Handle_PIN(&attempts, &last_account, &current_account, receivingMessage.data, accounts, numberOfAccounts);
+            sendingData = Handle_PIN(&attempts, &last_account, &current_account, receivingMessage.data, &accounts, numberOfAccounts);
             break;
         case BALANCE:
-            puts("received BALANCE");
 
             sendingData = Handle_BALANCE(receivingMessage.data, accounts, numberOfAccounts, current_account);
             break;
         case WITHDRAW:
-            puts("received WITHDRAW");
 
             sendingData = Handle_WITHDRAW(receivingMessage.data, accounts, numberOfAccounts, current_account);
             break;
         case UPDATE_DB:
-            puts("received UPDATE_DB");
 
-            Handle_UPDATE_DB(receivingMessage.data, accounts, &numberOfAccounts);
+            Handle_UPDATE_DB(receivingMessage.data, &accounts, &numberOfAccounts);
+
+            print_current_Accounts_DB_pointer(accounts, "DB ptr After print to db");
+
             break;
         default:
             perror("DBserver: Invalid message type received at DBserver");
@@ -138,21 +139,18 @@ int main(int argc, char *argv[])
             break;
         }
 
+
+       /*  print_current_Accounts_DB(accounts,numberOfAccounts, "DB After handling message"); */
+
+      /*   print_current_Accounts_DB_pointer(accounts, "DB ptr  After handling message"); */
+
         sendingMessage.data = sendingData;
 
-        printMessageType( (MessageType) message_received_message_type );
-
+     /*    printMessageType( (MessageType) message_received_message_type );
+ */
         x++;
 
-        puts("sent something to the client");
-
-        //printf("x is currently %d \n", x);
-
         sendMessage(msgID, sendingMessage, NOBLOCK);
-
-        puts("sent a message outwards");
-     
-
 
     } 
 
@@ -160,11 +158,12 @@ int main(int argc, char *argv[])
 
     free(accounts);
 
-    if( argc == 1 ){
+    if( argc == 0 ){
 
        /*  semDeleteNthSemInSet(semID , clientSemaphore);
         semDeleteNthSemInSet(semID , mailboxSemaphore); */
 
+      /*   puts("was here"); */
 
         semDelete(semID);
 
@@ -176,7 +175,7 @@ int main(int argc, char *argv[])
 
 
 // this function subtracts 1 from the pin to compare encrypted pin numbers
-DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,DataBundle message, Account* accounts, int numberOfAccounts){
+DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,DataBundle message, Account** accounts, int numberOfAccounts){
     
     DataBundle responseData;
 
@@ -188,21 +187,20 @@ DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,Dat
         *attempts = 3;
     }
 
-    int result = query_account_and_pin_in_db(accounts, numberOfAccounts, account_number, pin);
+    int result = query_account_and_pin_in_db(*accounts, numberOfAccounts, account_number, pin);
 
     if( result == -1 ){  // account exists but incorrect pin
         *attempts = *attempts - 1;
         
-        printf("account exists but incorrect pin\n");
-        printf("Attempts is currently %d\n", *attempts);
+    
 
         //if 3 attempts, lock the account
         if(*attempts == 0){
             
-            printf("account getting locked out\n");
+            lock_account_in_db(*accounts, numberOfAccounts, account_number);
+            DB_UPDATE_FILE(*accounts,numberOfAccounts, filename);
 
-            DB_UPDATE_FILE(accounts,numberOfAccounts, account_number, filename);
-            accounts = remove_account_from_db(accounts,numberOfAccounts, account_number);
+            responseData.account.isLocked = 1;
 
         }
 
@@ -210,8 +208,6 @@ DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,Dat
         *current_account = -1;
 
     }else if(result == -2){ //account does not exist
-
-        printf("account does not exist\n");
 
          responseData.response = PIN_WRONG;
         *current_account = -1;
@@ -241,7 +237,6 @@ DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAc
     }
     //int current_funds = 0;
 
-    printf("In handle balance  funds are %f\n", current_funds);
 
     responseData.response = current_funds;
     responseData.account.funds = current_funds;
@@ -267,7 +262,7 @@ DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAc
 
         //decrememt the funds in the account
         int result = withdrawal_within_in_db(accounts, numberOfAccounts, account, requested_withdrawal_amount);
-        DB_UPDATE_FILE(accounts,numberOfAccounts,-1,filename);
+        DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
         if(result == -1){
             perror("DBserver : error in handle withdraw");
             exit(1);
@@ -282,41 +277,17 @@ DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAc
     return responseData;
 }
 
-void Handle_UPDATE_DB(DataBundle message,  Account* accounts, int* numberOfAccounts){
+void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAccounts){
 
     Account account = message.account;
 
-    printf("Account info received: account number %d \n", account.accountNumber);
-    printf("Account info received: account Pin %d \n", account.pin);
-    printf("Account info received: account funds %f \n", account.funds);
-
-     printf(" Handle_UPDATE_DB printing old db before adding account\n");
-    for(int x = 0; x < *numberOfAccounts; x++){
-
-        printf("account %d : new array account number = %d PIN number = %d Funds = %f\n", x, accounts[x].accountNumber, accounts[x].pin, accounts[x].funds);
-
+    if(query_account_in_db(*accounts, *numberOfAccounts, account.accountNumber) == -1){
+        *accounts = add_account_to_db(*accounts, numberOfAccounts, account);
+    }else{
+        update_account_in_db(*accounts, *numberOfAccounts, account);
     }
-
-    Account* newAccounts = add_account_to_db(accounts, numberOfAccounts, account);
-    //accounts = add_account_to_db(accounts, numberOfAccounts, account);
-
-    accounts = newAccounts;
-
-     printf("Handle_UPDATE_DB printing old db after adding account\n");
-    for(int x = 0; x < *numberOfAccounts; x++){
-
-        printf("account %d : new array account number = %d PIN number = %d Funds = %f\n", x, accounts[x].accountNumber, accounts[x].pin, accounts[x].funds);
-
-    }
-
-    DB_UPDATE_FILE(accounts, *numberOfAccounts, -1, filename);
-
-     printf("Handle_UPDATE_DB printing old db after writing to db\n");
-    for(int x = 0; x < *numberOfAccounts; x++){
-
-        printf("account %d : new array account number = %d PIN number = %d Funds = %f\n", x, accounts[x].accountNumber, accounts[x].pin, accounts[x].funds);
-
-    }
+    
+    DB_UPDATE_FILE(*accounts, *numberOfAccounts, filename);
     
 }
 
@@ -365,9 +336,9 @@ int countNumberOfAccounts(const char *inputFile)
     while (fgets(input_line, sizeof(input_line), file))
     {
 
-        if(strncmp(&input_line[0],"x",1) == 0){  // if the account is blocked then don't include it in the count
+        /* if(strncmp(&input_line[0],"x",1) == 0){  // if the account is blocked then don't include it in the count
             continue;
-        }
+        } */
         accountCtr++; //Increment process counter for each line read
     }
 
@@ -406,7 +377,10 @@ void readDBFile(Account *accounts, const char *inputFile)
     {
         
         if(strncmp(&str[0],"x",1) == 0){  // if the account is blocked then don't include it in the count
-            continue;
+           /*  continue; */
+            accounts[account_position].isLocked = 1;
+        }else{
+            accounts[account_position].isLocked = 0;
         }
 
         token = strtok(str, truncate); //Break input into a series of tokens
@@ -418,7 +392,11 @@ void readDBFile(Account *accounts, const char *inputFile)
             // if statements to set the members of the process struct according to the input from the file
             if (input_field == 0)
             {
-                accounts[account_position].accountNumber = atoi(token);
+                if(strncmp(&str[0],"x",1) == 0){ // account is currently locked
+                    accounts[account_position].accountNumber = atoi(token+1); // skips the x and reads the numbers after the x
+                }else{
+                    accounts[account_position].accountNumber = atoi(token);
+                }
             }
             else if (input_field == 1)
             {
@@ -465,7 +443,7 @@ Account* DB_INIT(const char *inputFile, int *numberOfAccounts){
 //parameters are an Account array, the current number of accounts, account number of locked account (set to --1 if there is no account to lock) , 
 //and the filename of the DB
 //returns nothing
-void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,int locked_account_number,const char *inputFile){ // after a withdrawal, new account, or lock
+void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,const char *inputFile){ // after a withdrawal, new account, or lock
     
     
     FILE *file = fopen(inputFile, "w"); //Opens the input file within current working directory in read mode
@@ -481,7 +459,7 @@ void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,int locked_account_nu
     for(int x = 0; x < numberOfAccounts; x++){
 
         //print the accounts to the DBFile
-        if(locked_account_number != -1 && accounts[x].accountNumber == locked_account_number){
+        if(accounts[x].isLocked == 1){
             fprintf(file,"x%04d,%03d,%.2f", accounts[x].accountNumber,accounts[x].pin,accounts[x].funds);
         }else{
             fprintf(file,"%05d,%03d,%.2f", accounts[x].accountNumber,accounts[x].pin,accounts[x].funds);
@@ -506,43 +484,29 @@ Account* add_account_to_db(Account *accounts,int* numberOfAccounts, Account acco
     newAccount.accountNumber = account.accountNumber;
     newAccount.pin = account.pin;
     newAccount.funds = account.funds;
+    newAccount.isLocked = account.isLocked;
 
     int newArrayLength = *numberOfAccounts + 1; 
 
     Account *newArray;
     newArray =  (Account *) malloc( (newArrayLength) * sizeof(Account) );
 
-    puts("Accounts\n");
+    for(int x = 0; x < newArrayLength; x++){
 
-    
-    printf("printing old db after adding account\n");
-    for(int x = 0; x < newArrayLength-1; x++){
-
-        printf("account %d : new array account number = %d PIN number = %d Funds = %f\n", x, accounts[x].accountNumber, accounts[x].pin, accounts[x].funds);
-
-    }
-
-
-    for(int x = 0; x < *numberOfAccounts; x++){
-
-           // newArray[x] = accounts[x];
-            newArray[x].accountNumber = accounts[x].accountNumber;
-            newArray[x].pin = accounts[x].pin;
-            newArray[x].funds = accounts[x].funds;
-            printf("account %d : account number = %d, new array account number = %d\n", x, accounts[x].accountNumber, newArray[x].accountNumber);
-    }
-       
+        if(x == newArrayLength -1){
             newArray[*numberOfAccounts].accountNumber = newAccount.accountNumber;
             newArray[*numberOfAccounts].pin = newAccount.pin;
             newArray[*numberOfAccounts].funds = newAccount.funds;
-            printf("account %d new array account number = %d\n", *numberOfAccounts,  newArray[*numberOfAccounts].accountNumber);
-        
+            newArray[*numberOfAccounts].isLocked = newAccount.isLocked;
 
+        }else{
 
-    printf("printing new db after adding account\n");
-    for(int x = 0; x < newArrayLength; x++){
+            newArray[x].accountNumber = accounts[x].accountNumber;
+            newArray[x].pin = accounts[x].pin;
+            newArray[x].funds = accounts[x].funds;
+            newArray[x].isLocked = accounts[x].isLocked;
 
-        printf("account %d : new array account number = %d PIN number = %d Funds = %f\n", x, newArray[x].accountNumber, newArray[x].pin, newArray[x].funds);
+        }
 
     }
 
@@ -556,24 +520,18 @@ Account* add_account_to_db(Account *accounts,int* numberOfAccounts, Account acco
 //function for removing a locked account in the system
 //parameters are an array of accounts , account number of the accounts, and the account being removed
 //returns a pointer to a newly sized array with the updated information
-Account* remove_account_from_db(Account *accounts,int numberOfAccounts, int accountToRemove){
+void lock_account_in_db(Account *accounts,int numberOfAccounts, int accountToLock){
 
-    int newArrayLength = numberOfAccounts - 1; 
+    
+    for(int x = 0; x < numberOfAccounts; x++){
 
-    Account *newArray =  (Account *) malloc( (newArrayLength) * sizeof(Account) );
-
-    for(int x = 0; x < newArrayLength + 1; x++){
-
-        if(accounts[x].accountNumber == accountToRemove){
-            continue;
-        }else{
-            newArray[x] = accounts[x];
+        if(accounts[x].accountNumber == accountToLock){
+            accounts[x].isLocked = 1;
+            break;
         }
+
     }
 
-    free(accounts);
-
-    return newArray;
 
 }
 
@@ -587,12 +545,9 @@ int query_account_and_pin_in_db(Account *accounts,int numberOfAccounts,int accou
     for(int x = 0; x < numberOfAccounts; x++){
 
         //checks if the account numbers exist in the array of accounts
-        if(accounts[x].accountNumber == account_number){
+        if( accounts[x].isLocked == 0  && accounts[x].accountNumber == account_number){
 
-            printf("account number %d\n", account_number);
-            printf("account pin in system %d\n", accounts[x].pin);
-            printf("account pin that was entered %d\n", pin);
-
+           
 
             if(accounts[x].pin == pin){ // if the encrypted pin matchs, return 1
                 return 1;
@@ -609,6 +564,25 @@ int query_account_and_pin_in_db(Account *accounts,int numberOfAccounts,int accou
 
 }
 
+//function for checking an account with a specific account exists in the system
+//parameters are an array of accounts , account number of the account being queried
+//returns 1 if the account exists , otherwise returns -1
+int query_account_in_db(Account *accounts,int numberOfAccounts,int account_number){
+
+    //iterate through all the accounts 
+    for(int x = 0; x < numberOfAccounts; x++){
+
+        //checks if the account numbers exist in the array of accounts
+        if(accounts[x].accountNumber == account_number){
+            return 1;
+        }
+    }
+
+    //no accounts with the account number specified
+    return -1;
+
+}
+
 //function for checking the balance of an account in the system
 //parameters are an array of accounts , the number of accounts , account number of the account being queried
 //returns the current funds within the account, otherwise returns -1 if the account could not be found
@@ -617,7 +591,6 @@ float query_balance_in_db(Account *accounts,int numberOfAccounts,int account_num
     for(int x = 0; x < numberOfAccounts; x++){
         
 
-      //  printf("IN query balance , account number %d , funds %f\n",accounts[x].accountNumber, accounts[x].funds);
         //checks if the account numbers exist in the array of accounts
         if(accounts[x].accountNumber == account_number){
 
@@ -650,4 +623,53 @@ int withdrawal_within_in_db(Account *accounts,int numberOfAccounts,int account_n
 
     //no accounts with the account number specified
     return -1;
+}
+
+//function for updating an account within the system
+//parameters are an array of accounts , the number of accounts , and the account information being updated
+//returns nothing
+void update_account_in_db(Account *accounts,int numberOfAccounts,Account account){
+         //iterate through all the accounts 
+    for(int x = 0; x < numberOfAccounts; x++){
+
+        //checks if the account numbers exist in the array of accounts
+        if(accounts[x].accountNumber == account.accountNumber){
+
+            accounts[x].pin = account.pin;
+            accounts[x].funds = account.funds;
+            accounts[x].isLocked = account.isLocked;
+
+            return;
+        }
+    }
+
+}
+
+
+//For testing and debugging
+void print_current_Accounts_DB(Account *accounts,int numberOfAccounts, char *message){
+
+    puts("<--------------------------Start------------------------------>");
+
+    puts(message);
+
+   //iterate through all the accounts 
+    for(int x = 0; x < numberOfAccounts; x++){
+
+        printf("Position: %d, Account Number:%d, Account PIN: %d, Account Funds: %f, isLocked: %d\n", x,  accounts[x].accountNumber,  accounts[x].pin,  accounts[x].funds, accounts[x].isLocked );
+    
+    }
+
+    puts("--------------------------------------------------------");
+}
+
+void print_current_Accounts_DB_pointer(Account *accounts, char *message){
+
+    puts("<--------------------------Start------------------------------>");
+
+    puts(message);
+
+    printf("Current Account pointer is %p\n", (void *) accounts);
+
+    puts("--------------------------------------------------------");
 }

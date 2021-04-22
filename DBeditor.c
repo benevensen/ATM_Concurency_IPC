@@ -93,10 +93,8 @@ int main(int argc, char *argv[])
             puts("Error in one of the inputs, please enter the information again");
             continue;
         }
-        puts("got input");
 
         SemaphoreWait(semID, BLOCK );
-        puts("got the client semaphore");
 
 
         resetDataBundle(&sendingMessage.data);
@@ -106,16 +104,18 @@ int main(int argc, char *argv[])
         sendingMessage.data.account.accountNumber = account_number;
         sendingMessage.data.account.pin = pin;
         sendingMessage.data.account.funds = funds;
+        sendingMessage.data.account.isLocked = 0;
+
 
 
 
         sendMessage(msgID, sendingMessage, NOBLOCK);
 
         
-        puts("put something in the mailbox");
 
         resetDataBundle(&receivingMessage.data);
-        //receiveMessage(msgID, &receivingMessage, BLOCK);
+        
+        receiveMessage(msgID, &receivingMessage, BLOCK);
 
         response = receivingMessage.data.response;
 

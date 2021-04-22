@@ -122,7 +122,7 @@ int semInitForNthSemInSet(int semId, int n){
 int semDelete(int semId){
     int semId_1;
 
-    if (  semId != -1 && (semId_1 = semctl(semId, 0, IPC_RMID, 0)) == -1)
+    if (  semId != -1 && (semId_1 = semctl(semId, 0, IPC_RMID)) == -1)
     {
         perror( "Error in semctl (IPC_RMID)");
     }

@@ -108,9 +108,19 @@ void ATM_START() {
 
     /* Keeping the ATM running */
     do {
-        /* Getting the account number and account number from the user*/
-        accountNumber = getUserInput("Kindly enter your account number:\n");
-        accountPIN = getUserInput("Kindly enter you PIN:\n");
+
+        do
+        {
+            /* Getting the account number and account number from the user*/
+            accountNumber = getUserInput("Kindly enter your account number:\n");
+            accountPIN = getUserInput("Kindly enter you PIN:\n");
+
+            if(accountNumber == -2 || accountPIN == -2){
+                puts("Error in PIN or Account Number");
+            }
+
+        } while (accountNumber == -2 || accountPIN == -2);
+        
 
         //enter the critical section
         SemaphoreWait(semID, BLOCK );
@@ -155,12 +165,18 @@ void ATM_START() {
 
         response = receivingMessage.data.response;
         
-        printf("response was %d", response);
-        printResponseType(response);
+       /*  printf("response was %d", response);
+        printResponseType(response); */
         
         /* If we receive the "OK" from the DB we may proceed to selection */
         
         if(response == PIN_WRONG){
+            
+            if(receivingMessage.data.account.isLocked == 1){
+                puts("This account has been blocked!");
+            }else{
+                puts("Account number or PIN was incorrect");
+            }
 
             // if the pin or account is wrong, it will request information from the user again
             continue;
@@ -229,17 +245,7 @@ void ATM_START() {
             perror("Received unknown message from DB");
         }
 
-        /* If the user inputs the wrong account or PIN; dock them an attempt */
-        /* else {
-            printf("\nIncorrect account or PIN\n");
-            attempts -= 1; */
-
-            /* If they are out of attempts; exit (what we chose to do) */
-           /*  if (attempts <= 0){
-                printf("\nAccount is locked\n");
-                exit(EXIT_FAILURE);                         // Not specified if should exit
-            }
-        } */
+     
 
     } while (1);
     wait(NULL);
