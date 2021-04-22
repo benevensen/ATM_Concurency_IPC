@@ -13,8 +13,6 @@
 
 const char filename[20] = "DB_file.txt";
 
-void start_child_process(const char * programFilePath, int msgID);
-
 DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,DataBundle message, Account** accounts, int numberOfAccounts);
 
 DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount);
@@ -55,11 +53,11 @@ int main(int argc, char *argv[])
 
     int msgID = getmsgQueueID();
 
-    if( argc == 0 ){
-
-        semInit(semID);
     
-    }
+
+    semInit(semID);
+    
+    
     int x = 0;
 
     GenericMessage sendingMessage;
@@ -154,23 +152,15 @@ int main(int argc, char *argv[])
 
     } 
 
-    //wait(NULL);
+    wait(NULL);
 
     free(accounts);
 
-    if( argc == 0 ){
 
-       /*  semDeleteNthSemInSet(semID , clientSemaphore);
-        semDeleteNthSemInSet(semID , mailboxSemaphore); */
+    semDelete(semID);
 
-      /*   puts("was here"); */
-
-        semDelete(semID);
-
-        deleteMessageQueue(msgID);
-    }
-
-    exit(0);
+    deleteMessageQueue(msgID);
+    
 }
 
 
@@ -290,29 +280,6 @@ void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAcco
     DB_UPDATE_FILE(*accounts, *numberOfAccounts, filename);
     
 }
-
-
-void start_child_process(const char * programFilePath, int msgID){
-
-    pid_t pid;
-
-    pid = fork();
-
-    if(pid < 0){
-        perror("fork failed");
-        exit(1);
-    }else if (pid == 0){ //child process
-
-        char numArg[8];
-
-        sprintf(numArg, "%d", msgKey);
-
-        execlp(programFilePath,numArg, NULL);
-
-    }
-
-}
-
 
 //Function to count the number of accounts in the database file
 //parameter is a string of the name of the inputFile

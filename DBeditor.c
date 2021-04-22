@@ -61,8 +61,9 @@ int main(int argc, char *argv[])
     int semID = getSemId();
 
     //semInit(semID);
-
     int msgID = getmsgQueueID();
+
+    start_child_process("./DBserver", 0);   // Forking the child process
 
     GenericMessage sendingMessage;
     GenericMessage receivingMessage;

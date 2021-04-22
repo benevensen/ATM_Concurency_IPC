@@ -176,3 +176,33 @@ int receiveMessage(int messageQueueId, GenericMessage *message, int shouldIBlock
    
    return result;
 }
+
+
+
+void start_child_process(const char * programFilePath, int msgID){
+
+    pid_t pid;
+
+    pid = fork();
+
+    if(pid < 0){
+        perror("fork failed");
+        exit(1);
+    }
+    else if (pid == 0)
+    { //child process
+
+        if (msgID == 0)
+        {
+            execlp(programFilePath,"", NULL);
+        }
+        else
+        {
+            char numArg[8];
+
+            sprintf(numArg, "%d", msgKey);
+
+            execlp(programFilePath, numArg, NULL);
+        }
+    }
+}

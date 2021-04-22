@@ -52,26 +52,6 @@ int EQUALITY_CHECK(char *ARR1, char *ARR2, int LENGTH){
     return 1;                               // They are equal; return 1
 }
 
-void start_child_process(const char * programFilePath, int msgID){
-
-    pid_t pid;
-
-    pid = fork();
-
-    if(pid < 0){
-        perror("fork failed");
-        exit(1);
-    }else if (pid == 0){ //child process
-
-        char numArg[8];
-
-        sprintf(numArg, "%d", msgKey);
-
-        execlp(programFilePath,numArg, NULL);
-
-    }
-
-}
 
 
 /*
@@ -83,13 +63,11 @@ void ATM_START() {
     GenericMessage receivingMessage;
 
     int semID = getSemId();
-    semInit(semID);
-
+/*     semInit(semID);
+ */
 
     int msgID = getmsgQueueID();     // Getting the message queue id
     int status;                     // Represents the status when sending and receiving on the message queue
-
-    start_child_process("./DBserver", msgID);   // Forking the child process
 
     int accountNumber = -1;          // User given account number
     int accountPIN = 1;              // User given PIN
@@ -250,15 +228,14 @@ void ATM_START() {
     } while (1);
     wait(NULL);
 
-    semDelete(semID);
+   /*  semDelete(semID);
 
-    deleteMessageQueue(msgID);
+    deleteMessageQueue(msgID); */
 }
 
 
 int main() {
     ATM_START();
-
 }
 
 
