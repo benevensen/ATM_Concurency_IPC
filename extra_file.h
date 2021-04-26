@@ -8,7 +8,9 @@
 
 const int shmKey = 99999;
 
-const int semKey = 99999;
+const int clientSemKey = 99999;
+const int SharedMemorySemKey = 99997;
+
 
 const int msgKey = 99999;
 
@@ -74,7 +76,7 @@ void deleteSharedMemory(int shmID){
 
 // Semaphore Interface
 
-int getSemId(){
+int getSemId(int semKey){
     int semId_1;
 
     if ((semId_1 = semget(semKey, 1, 0666 | IPC_CREAT)) == -1)
@@ -85,7 +87,7 @@ int getSemId(){
     return semId_1;
 }
 
-int getSemIdForNSems(int sems){
+int getSemIdForNSems(int semKey,int sems){
     int semId_1;
 
     if ((semId_1 = semget(semKey, sems, 0666 | IPC_CREAT)) == -1)

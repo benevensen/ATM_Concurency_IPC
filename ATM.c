@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "extra_file.h"
 #include "DBserver.h"
@@ -62,7 +63,7 @@ void ATM_START() {
     GenericMessage sendingMessage;
     GenericMessage receivingMessage;
 
-    int semID = getSemId();
+    int semID = getSemId(clientSemKey);
 /*     semInit(semID);
  */
 
@@ -79,6 +80,39 @@ void ATM_START() {
 
     resetDataBundle(&sendingMessage.data);
     resetDataBundle(&receivingMessage.data);
+
+    signal(SIGHUP, exit_program);
+
+
+//-------------------------------------------------------------------------------------------------------------
+// Sign in process to register the client with the server so that the server can shut down the system
+// Sign in process also limits the system to only have 1 interest calculator, 5 atms, and 1 DB editor
+
+    //register the client with the server
+    SemaphoreWait(semID, BLOCK);
+
+    resetDataBundle(&sendingMessage.data);
+
+    sendingMessage.data.type.message = SIGNIN;
+    sendingMessage.data.pid = getpid();
+    status = sendMessage(msgID, sendingMessage, NOBLOCK);           // Sending the SEND struct; contains PID of the current process
+
+    resetDataBundle(&sendingMessage.data);
+
+    status = receiveMessage(msgID, &receivingMessage, BLOCK);     // Receiving the DB struct; contains response
+    
+    SemaphoreSignal(semID);
+
+    if(receivingMessage.data.response == NOSPACE){
+        puts("The maximum number of clients has been reached! Quiting program....");
+        exit(0);
+    }else if(receivingMessage.data.response != OK){
+        perror("(ATM) Error in sign in process: ");
+        exit(0);
+    }
+
+
+//-------------------------------------------------------------------------------------------------------------
 
 
 
@@ -228,9 +262,6 @@ void ATM_START() {
     } while (1);
     wait(NULL);
 
-   /*  semDelete(semID);
-
-    deleteMessageQueue(msgID); */
 }
 
 
