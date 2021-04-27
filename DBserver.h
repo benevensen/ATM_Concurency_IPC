@@ -3,6 +3,7 @@
 
 
 typedef enum MessageType{
+    SIGNIN,
     PIN,
     BALANCE,
     TRANSFER,
@@ -19,6 +20,7 @@ typedef struct Account{
 }Account;
 
 typedef enum ResponseType{
+    NOSPACE,
     OK,
     PIN_WRONG,
     BALANCE_RESPONSE,
@@ -50,6 +52,7 @@ typedef union message_response_types{
 typedef struct DataBundle{
     message_response_types type;
     Account account;
+    pid_t pid; //PID for sign in process
     int response;
 } DataBundle;
 
@@ -60,6 +63,35 @@ typedef struct genericMessage {
     DataBundle data;
 } GenericMessage;
 
+
+typedef struct System_Memory {
+    int process_count;
+    pid_t process_IDs[7];
+} System_Memory;
+
+
+void initSystemMemory(System_Memory *sys_mem){
+
+    sys_mem->process_count = 0;
+
+    for(int x = 0; x < 7; x++){
+        sys_mem->process_IDs[x] = -1;
+    }
+
+}
+
+int addProcessToSystem(System_Memory *sys_mem, pid_t pid){
+
+    if(sys_mem->process_count > 6){
+        return -1;
+    }else{
+        sys_mem->process_IDs[sys_mem->process_count] = pid;
+        sys_mem->process_count++;
+    }
+
+    return 1;
+
+}
 
 void resetDataBundle( DataBundle * DataBundle){
 
@@ -206,4 +238,10 @@ void start_child_process(const char * programFilePath, int msgID){
             execlp(programFilePath, numArg, NULL);
         }
     }
+
+}
+
+
+void exit_program(){
+    exit(0);
 }

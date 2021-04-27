@@ -19,6 +19,8 @@ DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAc
 
 DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount);
 
+DataBundle Handle_SIGNIN(DataBundle message, System_Memory* sys_mem);
+
 DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAccounts, int sendingAccount, int receivingAccount);
 
 void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAccounts);
@@ -53,14 +55,15 @@ void print_current_Accounts_DB_pointer(Account *accounts, char *message);
 int main(int argc, char *argv[])
 {
 
-    int semID = getSemId();
+    int semID = getSemId(clientSemKey);
 
     int msgID = getmsgQueueID();
 
-    
+    System_Memory sys_memory;
+
+    initSystemMemory(&sys_memory);
 
     semInit(semID);
-    
     
     int x = 0;
 
@@ -102,9 +105,13 @@ int main(int argc, char *argv[])
         // if error or exit command then exit the loop
         if(receivingMessage.data.account.accountNumber == -1 || receivingMessage.data.response == -1){
 
-            sendingMessage.data.response = -1;
+          /*   sendingMessage.data.response = -1;
 
-            sendMessage(msgID, sendingMessage, NOBLOCK);
+            sendMessage(msgID, sendingMessage, NOBLOCK); */
+
+            for(int y = 0; y < sys_memory.process_count; y++){
+                kill(sys_memory.process_IDs[y], SIGHUP);
+            }
 
             break;
         }
@@ -136,8 +143,12 @@ int main(int argc, char *argv[])
 
             Handle_UPDATE_DB(receivingMessage.data, &accounts, &numberOfAccounts);
 
-            print_current_Accounts_DB_pointer(accounts, "DB ptr After print to db");
+/*             print_current_Accounts_DB_pointer(accounts, "DB ptr After print to db");
+ */
+            break;
+        case SIGNIN:
 
+            sendingData = Handle_SIGNIN(receivingMessage.data, &sys_memory);
             break;
         default:
             perror("DBserver: Invalid message type received at DBserver");
@@ -710,6 +721,30 @@ int check_account_in_db(Account *accounts,int numberOfAccounts,int account_numbe
     //no accounts with the account number specified
     return -1;
 }
+
+DataBundle Handle_SIGNIN(DataBundle message, System_Memory* sys_mem){
+
+    if(message.pid <= 0){
+        perror("(Server) Error in Sign in progress (problem with pid received) :");
+        exit(1);
+    }
+    
+    pid_t pid = message.pid;
+
+    int result = addProcessToSystem(sys_mem, pid);
+
+    DataBundle data;
+
+    if(result == -1){
+        data.response = NOSPACE;
+    }else{
+        data.response = OK;
+    }
+
+    return data;
+}
+
+
 
 //For testing and debugging
 void print_current_Accounts_DB(Account *accounts,int numberOfAccounts, char *message){
