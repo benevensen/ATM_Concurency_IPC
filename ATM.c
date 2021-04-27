@@ -204,6 +204,7 @@ void ATM_START() {
                 sendingMessage.data.type.message = TRANSFER;
                 sendingMessage.data.account.isReceivingTransfer = recepient;
                 sendingMessage.data.account.funds = AMOUNT;
+                sendingMessage.data.account.accountNumber = accountNumber;
             }
 
             resetDataBundle(&receivingMessage.data);
@@ -214,7 +215,7 @@ void ATM_START() {
             sendMessage(msgID, sendingMessage, NOBLOCK);
             receiveMessage(msgID, &receivingMessage, BLOCK);
 
-            //enter the critical section
+            //exit the critical section
             SemaphoreSignal(semID);
 
 
@@ -226,6 +227,8 @@ void ATM_START() {
                     printf("\nInsufficient funds\n");
                 }else if(receivingMessage.data.response == FUNDS_OK){
                     printf("\nNew balance:- $%.2f \n", receivingMessage.data.account.funds);       // Receives the response from the DB
+                }else if(receivingMessage.data.response == RECIPIENT_DOES_NOT_EXIST) {
+                    printf("\n Recipient Account does not exist!\n");
                 }else{
                     perror("Unknown message received from the DB Server");
                 }

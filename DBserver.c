@@ -39,6 +39,7 @@ int withdrawal_within_in_db(Account *accounts,int numberOfAccounts,int account_n
 int depost_within_in_db(Account *accounts,int numberOfAccounts,int account_number, float funds_being_deposited);
 int query_account_in_db(Account *accounts,int numberOfAccounts,int account_number);
 void update_account_in_db(Account *accounts,int numberOfAccounts,Account account);
+int check_account_in_db(Account *accounts,int numberOfAccounts,int account_number);
 
 
 Account* DB_INIT(const char *inputFile, int *numberOfAccounts);
@@ -278,18 +279,20 @@ DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAc
 
     DataBundle responseData;
 
-    int this_account = sendingAccount;
-    int that_account = receivingAccount;
-
     float requested_transfer_amount = message.account.funds;
+    
+    //check if receiving account exists
+    int result = check_account_in_db(accounts, numberOfAccounts, receivingAccount);
 
-    float current_funds = query_balance_in_db(accounts, numberOfAccounts, this_account); 
+    float current_funds = query_balance_in_db(accounts, numberOfAccounts, sendingAccount); 
 
-    if(current_funds < requested_transfer_amount){
+    if(result == -1){
+        responseData.response = RECIPIENT_DOES_NOT_EXIST;
+    }else if(current_funds < requested_transfer_amount){
         responseData.response = NSF;
     } else {
         /* Increment the funds in the recepient's account */
-        int incremented_result = depost_within_in_db(accounts, numberOfAccounts, that_account, requested_transfer_amount);
+        int incremented_result = depost_within_in_db(accounts, numberOfAccounts, receivingAccount, requested_transfer_amount);
         DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
         if(incremented_result == -1){
             perror("DBserver : error in handle deposit");
@@ -297,14 +300,14 @@ DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAc
         }
 
         //decrememt the funds in the account
-        int decremented_result = withdrawal_within_in_db(accounts, numberOfAccounts, this_account, requested_transfer_amount);
+        int decremented_result = withdrawal_within_in_db(accounts, numberOfAccounts, sendingAccount, requested_transfer_amount);
         DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
         if(decremented_result == -1){
             perror("DBserver : error in handle withdraw");
             exit(1);
         }
 
-        current_funds = query_balance_in_db(accounts, numberOfAccounts,this_account); 
+        current_funds = query_balance_in_db(accounts, numberOfAccounts,sendingAccount); 
 
         responseData.account.funds = current_funds;
         responseData.response = FUNDS_OK;
@@ -687,6 +690,26 @@ void update_account_in_db(Account *accounts,int numberOfAccounts,Account account
 
 }
 
+//function for checking if an account exists in the system
+//parameters are an array of accounts , the number of accounts , and the account number of the account being checked
+//returns -1 if the account doesn't exist, also returns 1 if the account exists
+int check_account_in_db(Account *accounts,int numberOfAccounts,int account_number){
+   //iterate through all the accounts 
+
+    for(int x = 0; x < numberOfAccounts; x++){
+        
+
+        //checks if the account numbers exist in the array of accounts
+        if(accounts[x].accountNumber == account_number){
+
+            return 1;
+            
+        }
+    }
+
+    //no accounts with the account number specified
+    return -1;
+}
 
 //For testing and debugging
 void print_current_Accounts_DB(Account *accounts,int numberOfAccounts, char *message){

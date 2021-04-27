@@ -24,6 +24,7 @@ typedef enum ResponseType{
     BALANCE_RESPONSE,
     FUNDS_OK,
     NSF,
+    RECIPIENT_DOES_NOT_EXIST
 } ResponseType;
 
 typedef struct ServerMailbox{
