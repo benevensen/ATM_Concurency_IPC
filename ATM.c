@@ -114,7 +114,8 @@ void ATM_START() {
 
 //-------------------------------------------------------------------------------------------------------------
 
-
+    int attempts = 2;
+    int last_account = -1;
 
     printf("<=====================> ATM <=====================>\n");
 
@@ -147,7 +148,19 @@ void ATM_START() {
 
         sendingMessage.data.type.message = PIN;
 
+        //resets attemps count 
+        if(last_account != accountNumber){
+                attempts = 2;
+                last_account = accountNumber;
+        }
+
+        //sets isLocked to true on PIN message, so if the current message is has the wrong PIN, then it will get locked
+        if(attempts <= 0){
+            sendingMessage.data.account.isLocked = 1;
+        }
+
         status = sendMessage(msgID, sendingMessage, NOBLOCK);           // Sending the SEND struct; contains PIN and account number
+        
         /* If the returned status is -1 there is an error in sending the message to the DB*/
         if (status < 0) {
             printf("Message cannot send");
@@ -184,12 +197,19 @@ void ATM_START() {
         
         if(response == PIN_WRONG){
             
+            if(last_account == accountNumber){
+                if(attempts > 0){
+                    attempts--;
+                }
+            }
+
             if(receivingMessage.data.account.isLocked == 1){
                 puts("This account has been blocked!");
             }else{
                 puts("Account number or PIN was incorrect");
             }
 
+            last_account = accountNumber;
             // if the pin or account is wrong, it will request information from the user again
             continue;
         }else if (response == OK) {
@@ -205,6 +225,8 @@ void ATM_START() {
             } while (strncmp(selection,"b",1) != 0 && strncmp(selection,"w",1) != 0 && strncmp(selection,"t",1) != 0);
             
             resetDataBundle(&sendingMessage.data);
+
+            sendingMessage.data.account.accountNumber = accountNumber;
 
             /* If its a BALANCE request */
             if (strncmp(selection,"b",1) == 0) {
@@ -238,7 +260,6 @@ void ATM_START() {
                 sendingMessage.data.type.message = TRANSFER;
                 sendingMessage.data.account.isReceivingTransfer = recepient;
                 sendingMessage.data.account.funds = AMOUNT;
-                sendingMessage.data.account.accountNumber = accountNumber;
             }
 
             resetDataBundle(&receivingMessage.data);
@@ -263,6 +284,8 @@ void ATM_START() {
                     printf("\nNew balance:- $%.2f \n", receivingMessage.data.account.funds);       // Receives the response from the DB
                 }else if(receivingMessage.data.response == RECIPIENT_DOES_NOT_EXIST) {
                     printf("\n Recipient Account does not exist!\n");
+                }else if(receivingMessage.data.response == INVALID_AMOUNT){
+                    printf("\n Transfer only works with positive values for funds!\n");
                 }else{
                     perror("Unknown message received from the DB Server");
                 }

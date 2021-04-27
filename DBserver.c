@@ -13,7 +13,7 @@
 
 const char filename[20] = "DB_file.txt";
 
-DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,DataBundle message, Account** accounts, int numberOfAccounts);
+DataBundle Handle_PIN(DataBundle message, Account** accounts, int numberOfAccounts);
 
 DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount);
 
@@ -79,10 +79,6 @@ int main(int argc, char *argv[])
     int message_received_message_type;
     DataBundle sendingData;
 
-    int attempts = 3;
-    int last_account = -1;
-    int current_account = -1;
-
     int numberOfAccounts = 0;
 
     Account * accounts;
@@ -125,15 +121,15 @@ int main(int argc, char *argv[])
         switch (message_received_message_type)
         {
         case PIN:
-            sendingData = Handle_PIN(&attempts, &last_account, &current_account, receivingMessage.data, &accounts, numberOfAccounts);
+            sendingData = Handle_PIN(receivingMessage.data, &accounts, numberOfAccounts);
             break;
         case BALANCE:
 
-            sendingData = Handle_BALANCE(receivingMessage.data, accounts, numberOfAccounts, current_account);
+            sendingData = Handle_BALANCE(receivingMessage.data, accounts, numberOfAccounts,  receivingMessage.data.account.accountNumber);
             break;
         case WITHDRAW:
 
-            sendingData = Handle_WITHDRAW(receivingMessage.data, accounts, numberOfAccounts, current_account);
+            sendingData = Handle_WITHDRAW(receivingMessage.data, accounts, numberOfAccounts, receivingMessage.data.account.accountNumber);
             break;
         case TRANSFER:
 
@@ -184,27 +180,21 @@ int main(int argc, char *argv[])
 
 
 // this function subtracts 1 from the pin to compare encrypted pin numbers
-DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,DataBundle message, Account** accounts, int numberOfAccounts){
+DataBundle Handle_PIN(DataBundle message, Account** accounts, int numberOfAccounts){
     
     DataBundle responseData;
 
     int account_number = message.account.accountNumber;
     int pin = message.account.pin - 1;
 
-    //reset attempts
-    if(*last_account != account_number){
-        *attempts = 3;
-    }
-
     int result = query_account_and_pin_in_db(*accounts, numberOfAccounts, account_number, pin);
 
     if( result == -1 ){  // account exists but incorrect pin
-        *attempts = *attempts - 1;
         
     
 
         //if 3 attempts, lock the account
-        if(*attempts == 0){
+        if(message.account.isLocked == 1){
             
             lock_account_in_db(*accounts, numberOfAccounts, account_number);
             DB_UPDATE_FILE(*accounts,numberOfAccounts, filename);
@@ -214,20 +204,16 @@ DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,Dat
         }
 
         responseData.response = PIN_WRONG;
-        *current_account = -1;
 
     }else if(result == -2){ //account does not exist
 
         responseData.response = PIN_WRONG;
-        *current_account = -1;
     }else{ //account exists and correct pin
 
         responseData.response = OK;
-        *current_account = account_number;
 
     }
 
-    *last_account = account_number;
 
     return responseData;
 }
@@ -299,6 +285,8 @@ DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAc
 
     if(result == -1){
         responseData.response = RECIPIENT_DOES_NOT_EXIST;
+    }else if(requested_transfer_amount < 0) { // can only transfer money and not debt
+        responseData.response = INVALID_AMOUNT;
     }else if(current_funds < requested_transfer_amount){
         responseData.response = NSF;
     } else {
