@@ -166,9 +166,9 @@ void ATM_START() {
             // if the user enters invalid input, the system will keep requesting a proper operation           
             do
             {
-                puts("Kindly enter your service; \"BALANCE (b) \" or \"WITHDRAW (w)\":\n");
+                puts("Kindly enter your service; \"BALANCE (b) \", \"WITHDRAW (w)\", or \"TRANSFER (t)\":\n");
                 fgets(selection,10,stdin);
-            } while (strncmp(selection,"b",1) != 0 && strncmp(selection,"w",1) != 0);
+            } while (strncmp(selection,"b",1) != 0 && strncmp(selection,"w",1) != 0 && strncmp(selection,"t",1) != 0);
             
             resetDataBundle(&sendingMessage.data);
 
@@ -190,7 +190,20 @@ void ATM_START() {
 
                 sendingMessage.data.type.message = WITHDRAW;
                 sendingMessage.data.account.funds = AMOUNT;
-               
+            }
+
+            /* If its a TRANSFER request */
+            else if(strncmp(selection,"t",1) == 0){
+                choice = 3;
+
+                float AMOUNT;
+                int recepient;
+                AMOUNT = getUserInput("\nKindly enter the amount to transfer (CAD assumed):- ");
+                recepient = getUserInput("\nKindly enter the recepients account number:-");
+
+                sendingMessage.data.type.message = TRANSFER;
+                sendingMessage.data.account.isReceivingTransfer = recepient;
+                sendingMessage.data.account.funds = AMOUNT;
             }
 
             resetDataBundle(&receivingMessage.data);

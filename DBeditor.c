@@ -108,8 +108,6 @@ int main(int argc, char *argv[])
         sendingMessage.data.account.isLocked = 0;
 
 
-
-
         sendMessage(msgID, sendingMessage, NOBLOCK);
 
         

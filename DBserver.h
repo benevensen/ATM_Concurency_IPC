@@ -1,5 +1,3 @@
-
-
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -7,6 +5,7 @@
 typedef enum MessageType{
     PIN,
     BALANCE,
+    TRANSFER,
     WITHDRAW,
     UPDATE_DB
 } MessageType;
@@ -15,6 +14,7 @@ typedef struct Account{
     int accountNumber;
     int pin;
     float funds;
+    int isReceivingTransfer; // May not be needed, we the recepient may not need to accept the transfer
     int isLocked;
 }Account;
 
@@ -147,8 +147,8 @@ int sendMessage(int messageQueueId, GenericMessage message, int shouldIBlockIfFu
         perror("msgsnd: msgsnd failed");
         exit(1);
     }
-   
-   return result;
+    
+    return result;
 }
 
 int receiveMessage(int messageQueueId, GenericMessage *message, int shouldIBlockIfFull){

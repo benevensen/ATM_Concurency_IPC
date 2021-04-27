@@ -19,6 +19,8 @@ DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAc
 
 DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount);
 
+DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAccounts, int sendingAccount, int receivingAccount);
+
 void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAccounts);
 
 
@@ -34,6 +36,7 @@ void lock_account_in_db(Account *accounts,int numberOfAccounts, int accountToLoc
 int query_account_and_pin_in_db(Account *accounts,int numberOfAccounts,int account_number, int pin);
 float query_balance_in_db(Account *accounts,int numberOfAccounts,int account_number);
 int withdrawal_within_in_db(Account *accounts,int numberOfAccounts,int account_number, float funds_being_withdrawn);
+int depost_within_in_db(Account *accounts,int numberOfAccounts,int account_number, float funds_being_deposited);
 int query_account_in_db(Account *accounts,int numberOfAccounts,int account_number);
 void update_account_in_db(Account *accounts,int numberOfAccounts,Account account);
 
@@ -124,6 +127,10 @@ int main(int argc, char *argv[])
 
             sendingData = Handle_WITHDRAW(receivingMessage.data, accounts, numberOfAccounts, current_account);
             break;
+        case TRANSFER:
+
+            sendingData = Handle_TRANSFER(receivingMessage.data, accounts, numberOfAccounts, receivingMessage.data.account.accountNumber, receivingMessage.data.account.isReceivingTransfer);
+            break;
         case UPDATE_DB:
 
             Handle_UPDATE_DB(receivingMessage.data, &accounts, &numberOfAccounts);
@@ -199,7 +206,7 @@ DataBundle Handle_PIN(int *attempts, int *last_account,int *current_account ,Dat
 
     }else if(result == -2){ //account does not exist
 
-         responseData.response = PIN_WRONG;
+        responseData.response = PIN_WRONG;
         *current_account = -1;
     }else{ //account exists and correct pin
 
@@ -265,6 +272,46 @@ DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAc
     }
 
     return responseData;
+}
+
+DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAccounts, int sendingAccount, int receivingAccount){
+
+    DataBundle responseData;
+
+    int this_account = sendingAccount;
+    int that_account = receivingAccount;
+
+    float requested_transfer_amount = message.account.funds;
+
+    float current_funds = query_balance_in_db(accounts, numberOfAccounts, this_account); 
+
+    if(current_funds < requested_transfer_amount){
+        responseData.response = NSF;
+    } else {
+        /* Increment the funds in the recepient's account */
+        int incremented_result = depost_within_in_db(accounts, numberOfAccounts, that_account, requested_transfer_amount);
+        DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
+        if(incremented_result == -1){
+            perror("DBserver : error in handle deposit");
+            exit(1);
+        }
+
+        //decrememt the funds in the account
+        int decremented_result = withdrawal_within_in_db(accounts, numberOfAccounts, this_account, requested_transfer_amount);
+        DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
+        if(decremented_result == -1){
+            perror("DBserver : error in handle withdraw");
+            exit(1);
+        }
+
+        current_funds = query_balance_in_db(accounts, numberOfAccounts,this_account); 
+
+        responseData.account.funds = current_funds;
+        responseData.response = FUNDS_OK;
+    }
+    return responseData;
+
+
 }
 
 void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAccounts){
@@ -590,6 +637,34 @@ int withdrawal_within_in_db(Account *accounts,int numberOfAccounts,int account_n
 
     //no accounts with the account number specified
     return -1;
+}
+
+/**
+ * Method for depositing money into an account.
+ * 
+ * @param *accounts, type Account. Corresponds to the list of accounts in the DB
+ * @param numberOfAccounts, type int. Corresponds to the number of accounts in the DB
+ * @param account_number, type int. Corresponds to the account number of the receiving account
+ * @param funds_being_deposited, type float. Corresponds to the amount of funds to be deposted into receiving account
+ * 
+ * @return int, representing the status to be returned
+ * */
+int depost_within_in_db(Account *accounts,int numberOfAccounts,int account_number, float funds_being_deposited){
+    /* Iterate through the accounts */
+    for (int i = 0; i < numberOfAccounts; i++)
+    {
+        if (accounts[i].accountNumber == account_number)
+        {
+            accounts[i].funds += funds_being_deposited;
+
+            return 1;
+            break;
+        }
+        
+    }
+    /* If there are no accounts corresponding to the provided account */
+    return -1;
+    
 }
 
 //function for updating an account within the system

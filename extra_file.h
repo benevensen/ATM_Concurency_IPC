@@ -65,7 +65,6 @@ void detachSharedMemory(void * SharedMemoryPointer){
 }
 
 
-
 void deleteSharedMemory(int shmID){
     if(shmctl(shmID, IPC_RMID, (struct shmid_ds *) NULL ) == -1){
         perror( "Error in shmdt");
@@ -291,13 +290,11 @@ int sendMessageDefault(int messageQueueId, my_message message, int shouldIBlockI
         perror("msgsnd: msgsnd failed");
         exit(1);
     }
-   
-   return result;
+
+    return result;
 }
 
 int receiveMessageDefault(int messageQueueId, my_message *message, int shouldIBlockIfFull){
-
-
     int flag;
 
     if(shouldIBlockIfFull > 0){
@@ -317,8 +314,8 @@ int receiveMessageDefault(int messageQueueId, my_message *message, int shouldIBl
         perror("msgsnd: msgsnd failed");
         exit(1);
     }
-   
-   return result;
+    
+    return result;
 }
 
 
