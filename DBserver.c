@@ -836,14 +836,17 @@ void deadlockInterestCalculator(int DBSemaphore, int SharedMemorySemaphore){
 
         printToLogFile("(Interest Calculator): acquiring semaphores");
 
+        //waiting the semaphore
         SemaphoreWait(DBSemaphore, BLOCK);
 
         sleep(100);
+        //waiting the shared memory semaphore
         SemaphoreWait(SharedMemorySemaphore, BLOCK);
 
-
+        //getting the signal for the shm semaphore
         SemaphoreSignal(SharedMemorySemaphore);
         
+        //getting the signal for the db semaphore
         SemaphoreSignal(DBSemaphore);
 
         printToLogFile("(Interest Calculator): released semaphores");
@@ -921,11 +924,13 @@ void normalInterestCalculator(){
 
         response = receivingMessage.data.response;
 
+        // if the response is an error; break
         if (response == -1)
         {
             break;
         }
 
+        //getting the semaphore signal for semID
         SemaphoreSignal(semID);
     }
 
