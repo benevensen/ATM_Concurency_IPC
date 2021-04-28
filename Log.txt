@@ -1,0 +1,2 @@
+(DBserver): acquiring semaphores and sending message 
+(Interest Calculator): acquiring semaphores 

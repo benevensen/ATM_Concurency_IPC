@@ -60,9 +60,6 @@ int main(int argc, char *argv[])
 
     int currentCase = -1;
 
-    printf("arges %d \n", argc);
-
-
     //if there is 2 program arguments (including the path)
     if(argc > 1){
         if(atoi(argv[1]) == 1){
@@ -705,13 +702,6 @@ int withdrawal_within_in_db(Account *accounts,int numberOfAccounts,int account_n
 
 /**
  * Method for depositing money into an account.
- * 
- * @param *accounts, type Account. Corresponds to the list of accounts in the DB
- * @param numberOfAccounts, type int. Corresponds to the number of accounts in the DB
- * @param account_number, type int. Corresponds to the account number of the receiving account
- * @param funds_being_deposited, type float. Corresponds to the amount of funds to be deposted into receiving account
- * 
- * @return int, representing the status to be returned
  * */
 int depost_within_in_db(Account *accounts,int numberOfAccounts,int account_number, float funds_being_deposited){
     /* Iterate through the accounts */
@@ -772,6 +762,9 @@ int check_account_in_db(Account *accounts,int numberOfAccounts,int account_numbe
     return -1;
 }
 
+/**
+ * Method for handling a signing in of a user
+ * */
 DataBundle Handle_SIGNIN(DataBundle message, System_Memory* sys_mem){
 
     if(message.pid <= 0){
@@ -794,11 +787,12 @@ DataBundle Handle_SIGNIN(DataBundle message, System_Memory* sys_mem){
     return data;
 }
 
-
+/**
+ * Method for handling the interest of a persons account
+ * */
 DataBundle Handle_INTEREST(Account* accounts, int numberOfAccounts){
     
     DataBundle responseData;
-
 
     for(int x = 0; x < numberOfAccounts; x++){
 
@@ -809,7 +803,6 @@ DataBundle Handle_INTEREST(Account* accounts, int numberOfAccounts){
         }
 
     }
-   
 
     DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
     
@@ -818,11 +811,11 @@ DataBundle Handle_INTEREST(Account* accounts, int numberOfAccounts){
     return responseData;
 }
 
-
+/**
+ * Method for generating a deadlock as per the assignment outlines
+ * */
 void deadlockInterestCalculator(int DBSemaphore, int SharedMemorySemaphore){
-    puts("made it here");
     while(1){
-      //  sleep(15);  // quicker timer to increase chances of deadlock
 
 
         printToLogFile("(Interest Calculator): acquiring semaphores");
@@ -834,7 +827,7 @@ void deadlockInterestCalculator(int DBSemaphore, int SharedMemorySemaphore){
 
 
         SemaphoreSignal(SharedMemorySemaphore);
-          
+        
         SemaphoreSignal(DBSemaphore);
 
         printToLogFile("(Interest Calculator): released semaphores");
@@ -844,11 +837,12 @@ void deadlockInterestCalculator(int DBSemaphore, int SharedMemorySemaphore){
 }
 
 
-
+/**
+ * Method for calculating the interest of a persons account
+ * */
 void normalInterestCalculator(){
     int semID = getSemId(clientSemKey);
 
-    //semInit(semID);
     int msgID = getmsgQueueID();
 
     GenericMessage sendingMessage;
@@ -859,8 +853,6 @@ void normalInterestCalculator(){
 
     resetDataBundle(&sendingMessage.data);
     resetDataBundle(&receivingMessage.data);
-
-    //puts("At any time, enter \"x\" to quit the program");
 
     signal(SIGHUP, exit_program);
 
@@ -896,12 +888,9 @@ void normalInterestCalculator(){
 
     while(1){
 
-       // sleep(60);
+        sleep(15);  // Wait for 15 seconds
 
-       //testing
-       sleep(15);
-
-        SemaphoreWait(semID, BLOCK);
+        SemaphoreWait(semID, BLOCK);    // Wait() the semaphore
 
         resetDataBundle(&sendingMessage.data);
 
@@ -927,7 +916,7 @@ void normalInterestCalculator(){
 }
 
 
-//For testing and debugging
+// Method for testing and debugging
 void print_current_Accounts_DB(Account *accounts,int numberOfAccounts, char *message){
 
     puts("<--------------------------Start------------------------------>");
@@ -944,6 +933,9 @@ void print_current_Accounts_DB(Account *accounts,int numberOfAccounts, char *mes
     puts("--------------------------------------------------------");
 }
 
+/**
+ * Method for printing a message and the pointer to the accounts
+ * */
 void print_current_Accounts_DB_pointer(Account *accounts, char *message){
 
     puts("<--------------------------Start------------------------------>");
