@@ -58,7 +58,7 @@ int EQUALITY_CHECK(char *ARR1, char *ARR2, int LENGTH){
 /*
  * Method to start the ATM system
  * */
-void ATM_START() {
+int main(int argc, char *argv[]){
 
     GenericMessage sendingMessage;
     GenericMessage receivingMessage;
@@ -82,6 +82,16 @@ void ATM_START() {
     resetDataBundle(&receivingMessage.data);
 
     signal(SIGHUP, exit_program);
+
+    int currentCase = -1;
+
+    if(argc > 1){
+        if(atoi(argv[1]) == 1){
+            currentCase = 1;
+        }else if(atoi(argv[1]) == 2){
+            currentCase = 2;
+        }
+    }
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -133,7 +143,12 @@ void ATM_START() {
             }
 
         } while (accountNumber == -2 || accountPIN == -2);
-        
+
+        if(currentCase == 1){
+            printToLogFile("(ATM) SIGNIN: acquiring semaphores and sending message");
+        }else if(currentCase == 2){
+            puts("(ATM) SIGNIN: acquiring semaphores and sending message");
+        }        
 
         //enter the critical section
         SemaphoreWait(semID, BLOCK );
@@ -187,6 +202,12 @@ void ATM_START() {
 
         //exit the critical section
         SemaphoreSignal(semID);
+
+        if(currentCase == 1){
+            printToLogFile("(ATM) SIGNIN: released semaphores and received message");
+        }else if(currentCase == 2){
+            puts("(ATM) SIGNIN: released semaphores and received message");
+        }
 
         response = receivingMessage.data.response;
         
@@ -263,7 +284,13 @@ void ATM_START() {
             }
 
             resetDataBundle(&receivingMessage.data);
-            
+
+            if (currentCase == 1){
+                printToLogFile("(ATM): acquiring semaphores and sending message");
+            }else if (currentCase == 2){
+                puts("(ATM): acquiring semaphores and sending message");
+            }
+
             //enter the critical section
             SemaphoreWait(semID, BLOCK);
 
@@ -273,6 +300,11 @@ void ATM_START() {
             //exit the critical section
             SemaphoreSignal(semID);
 
+            if(currentCase == 1){
+                printToLogFile("(ATM): released semaphores and received message");
+            }else if(currentCase == 2){
+                puts("(ATM): released semaphores and received message");
+            }
 
             if(choice == 1){
                 printf("\nCurrent balance:- $%.2f\n", receivingMessage.data.account.funds);
@@ -303,10 +335,6 @@ void ATM_START() {
 
 }
 
-
-int main() {
-    ATM_START();
-}
 
 
 /*

@@ -64,8 +64,15 @@ int main(int argc, char *argv[])
     //semInit(semID);
     int msgID = getmsgQueueID();
 
-    start_child_process("./DBserver", 0);   // Forking the child process
+    int currentCase = -1;
 
+    if(argc > 1){
+        if(atoi(argv[1]) == 1){
+            currentCase = 1;
+        }else if(atoi(argv[1]) == 2){
+            currentCase = 2;
+        }
+    }
     GenericMessage sendingMessage;
     GenericMessage receivingMessage;
 
@@ -84,6 +91,12 @@ int main(int argc, char *argv[])
 // Sign in process to register the client with the server so that the server can shut down the system
 // Sign in process also limits the system to only have 1 interest calculator, 5 atms, and 1 DB editor
 
+    if(currentCase == 1){
+        printToLogFile("(DBeditor) SIGNIN: acquiring semaphores and sending message");
+    }else if(currentCase == 2){
+        puts("(DBeditor) SIGNIN: acquiring semaphores and sending message");
+    }    
+
     //register the client with the server
     SemaphoreWait(semID, BLOCK);
 
@@ -98,6 +111,12 @@ int main(int argc, char *argv[])
     receiveMessage(msgID, &receivingMessage, BLOCK);     // Receiving the DB struct; contains response
 
     SemaphoreSignal(semID);
+
+    if(currentCase == 1){
+        printToLogFile("(DBeditor) SIGNIN: released semaphores and received message");
+    }else if(currentCase == 2){
+        puts("(DBeditor) SIGNIN: released semaphores and received message");
+    }
 
     if(receivingMessage.data.response == NOSPACE){
         puts("The maximum number of clients has been reached! Quiting program....");
@@ -129,6 +148,12 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        if(currentCase == 1){
+            printToLogFile("(DBeditor): acquiring semaphores and sending message");
+        }else if(currentCase == 2){
+            puts("(DBeditor): acquiring semaphores and sending message");
+        }
+
         SemaphoreWait(semID, BLOCK );
 
 
@@ -144,8 +169,6 @@ int main(int argc, char *argv[])
 
         sendMessage(msgID, sendingMessage, NOBLOCK);
 
-        
-
         resetDataBundle(&receivingMessage.data);
         
         receiveMessage(msgID, &receivingMessage, BLOCK);
@@ -158,6 +181,11 @@ int main(int argc, char *argv[])
 
         SemaphoreSignal(semID);
 
+        if(currentCase == 1){
+            printToLogFile("(DBeditor): released semaphores and received message");
+        }else if(currentCase == 2){
+            puts("(DBeditor): released semaphores and received message");
+        }
 
     }
 

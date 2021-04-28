@@ -8,7 +8,8 @@ typedef enum MessageType{
     BALANCE,
     TRANSFER,
     WITHDRAW,
-    UPDATE_DB
+    UPDATE_DB,
+    INTEREST
 } MessageType;
 
 typedef struct Account{
@@ -26,7 +27,8 @@ typedef enum ResponseType{
     BALANCE_RESPONSE,
     FUNDS_OK,
     NSF,
-    RECIPIENT_DOES_NOT_EXIST
+    RECIPIENT_DOES_NOT_EXIST,
+    INVALID_AMOUNT
 } ResponseType;
 
 typedef struct ServerMailbox{
@@ -69,6 +71,7 @@ typedef struct System_Memory {
     pid_t process_IDs[7];
 } System_Memory;
 
+const char filename[20] = "DB_file.txt";
 
 void initSystemMemory(System_Memory *sys_mem){
 

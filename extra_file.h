@@ -10,7 +10,7 @@ const int shmKey = 99999;
 
 const int clientSemKey = 99999;
 const int SharedMemorySemKey = 99997;
-
+const int DBFileSemKey = 99994;
 
 const int msgKey = 99999;
 
@@ -30,7 +30,7 @@ typedef union sharedVar
     int number;
 } sharedVar;
 
-
+const char logFile[20] = "Log.txt";
 
 // Shared Memory Interface
 
@@ -331,4 +331,22 @@ int deleteMessageQueue(int messageQueueId){
     }
 
     return result;
+}
+
+void printToLogFile(char* message){
+     
+    
+    FILE *file = fopen(logFile, "a"); //Opens the input file within current working directory in read mode
+
+    // If file could not open, prints the error and exits
+    if (file == NULL)
+    {
+        perror("printToLogFile: Could not open file.");
+        exit(1);
+    }
+
+    fprintf(file,"%s \n", message);
+
+    //closes the input file
+    fclose(file);
 }

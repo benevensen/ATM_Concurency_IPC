@@ -11,8 +11,6 @@
 #include "DBserver.h"
 
 
-const char filename[20] = "DB_file.txt";
-
 DataBundle Handle_PIN(DataBundle message, Account** accounts, int numberOfAccounts);
 
 DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount);
@@ -23,9 +21,14 @@ DataBundle Handle_SIGNIN(DataBundle message, System_Memory* sys_mem);
 
 DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAccounts, int sendingAccount, int receivingAccount);
 
+DataBundle Handle_INTEREST(Account* accounts, int numberOfAccounts);
+
 void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAccounts);
 
 
+void normalInterestCalculator();
+
+void deadlockInterestCalculator(int DBSemaphore, int SharedMemorySemaphore);
 
 // Database related functions
 
@@ -45,17 +48,33 @@ int check_account_in_db(Account *accounts,int numberOfAccounts,int account_numbe
 
 
 Account* DB_INIT(const char *inputFile, int *numberOfAccounts);
-
 void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,const char *inputFile); // after a withdrawal, new account, or lock
 
 void print_current_Accounts_DB(Account *accounts,int numberOfAccounts, char *message);
-
 void print_current_Accounts_DB_pointer(Account *accounts, char *message);
 
 int main(int argc, char *argv[])
 {
 
+    int param = 0;
+
+    int currentCase = -1;
+
+    printf("arges %d \n", argc);
+
+
+    //if there is 2 program arguments (including the path)
+    if(argc > 1){
+        if(atoi(argv[1]) == 1){
+            currentCase = 1;
+        }else if(atoi(argv[1]) == 2){
+            currentCase = 2;
+        }
+    }
+
     int semID = getSemId(clientSemKey);
+    int DBsemID;
+    int SharedMemoryID;
 
     int msgID = getmsgQueueID();
 
@@ -89,21 +108,54 @@ int main(int argc, char *argv[])
         accounts = (Account*) malloc(sizeof(Account));
     }
 
-    //print_current_Accounts_DB(accounts,numberOfAccounts, "Initial DB");
+    if(param == 1 || param == 2){
+        DBsemID = getSemId(SharedMemorySemKey);
+        SharedMemoryID = getSemId(DBFileSemKey);
+
+        semInit(DBsemID);
+        semInit(SharedMemoryID);
+    }
+
+    pid_t pid = fork();
+
+    if(pid < 0){
+        perror("(DBserver) error in forking");
+        exit(1);
+    }else if(pid == 0){
+
+        if(currentCase == 1){
+            //interest calculator that causes deadlock case
+            deadlockInterestCalculator(DBsemID, SharedMemoryID);
+        }else if(currentCase == 2){
+            //interest calculator that causes livestock case
+
+        }else{
+            //normal interest calculator
+            normalInterestCalculator();
+        }
+    }
 
     while(1){
+
+        if(currentCase == 1){
+            printToLogFile("(DBserver): acquiring semaphores and sending message");
+
+            SemaphoreWait(SharedMemoryID, BLOCK);
+
+            sleep(100);
+
+            SemaphoreWait(DBsemID, BLOCK);
+
+        }else if(currentCase == 2){
+            puts("(DBserver): acquiring semaphores and sending message");
+        }  
 
         resetDataBundle(&receivingMessage.data);
 
         receiveMessage(msgID, &receivingMessage, BLOCK);
 
-
         // if error or exit command then exit the loop
         if(receivingMessage.data.account.accountNumber == -1 || receivingMessage.data.response == -1){
-
-          /*   sendingMessage.data.response = -1;
-
-            sendMessage(msgID, sendingMessage, NOBLOCK); */
 
             for(int y = 0; y < sys_memory.process_count; y++){
                 kill(sys_memory.process_IDs[y], SIGHUP);
@@ -138,13 +190,15 @@ int main(int argc, char *argv[])
         case UPDATE_DB:
 
             Handle_UPDATE_DB(receivingMessage.data, &accounts, &numberOfAccounts);
-
-/*             print_current_Accounts_DB_pointer(accounts, "DB ptr After print to db");
- */
             break;
         case SIGNIN:
 
             sendingData = Handle_SIGNIN(receivingMessage.data, &sys_memory);
+            break;
+
+        case INTEREST:
+
+            sendingData = Handle_INTEREST(accounts, numberOfAccounts);
             break;
         default:
             perror("DBserver: Invalid message type received at DBserver");
@@ -152,18 +206,21 @@ int main(int argc, char *argv[])
             break;
         }
 
-
-       /*  print_current_Accounts_DB(accounts,numberOfAccounts, "DB After handling message"); */
-
-      /*   print_current_Accounts_DB_pointer(accounts, "DB ptr  After handling message"); */
-
         sendingMessage.data = sendingData;
 
-     /*    printMessageType( (MessageType) message_received_message_type );
- */
         x++;
 
         sendMessage(msgID, sendingMessage, NOBLOCK);
+
+        if(currentCase == 1){
+            printToLogFile("(DBserver): released semaphores and received message");
+
+            SemaphoreSignal(DBsemID);
+            SemaphoreSignal(SharedMemoryID);
+
+        }else if(currentCase == 2){
+            puts("(DBserver): released semaphores and received message");
+        }  
 
     } 
 
@@ -171,10 +228,15 @@ int main(int argc, char *argv[])
 
     free(accounts);
 
-
     semDelete(semID);
 
     deleteMessageQueue(msgID);
+
+    if(param == 1 || param == 2){
+        semDelete(SharedMemorySemKey);
+        semDelete(DBFileSemKey);
+    }
+
     
 }
 
@@ -191,7 +253,7 @@ DataBundle Handle_PIN(DataBundle message, Account** accounts, int numberOfAccoun
 
     if( result == -1 ){  // account exists but incorrect pin
         
-    
+
 
         //if 3 attempts, lock the account
         if(message.account.isLocked == 1){
@@ -732,6 +794,137 @@ DataBundle Handle_SIGNIN(DataBundle message, System_Memory* sys_mem){
     return data;
 }
 
+
+DataBundle Handle_INTEREST(Account* accounts, int numberOfAccounts){
+    
+    DataBundle responseData;
+
+
+    for(int x = 0; x < numberOfAccounts; x++){
+
+        if(accounts[x].funds > 0){
+            accounts[x].funds *= 1.01;
+        }else{
+            accounts[x].funds *= 0.98;
+        }
+
+    }
+   
+
+    DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
+    
+    responseData.response = OK;
+    
+    return responseData;
+}
+
+
+void deadlockInterestCalculator(int DBSemaphore, int SharedMemorySemaphore){
+    puts("made it here");
+    while(1){
+      //  sleep(15);  // quicker timer to increase chances of deadlock
+
+
+        printToLogFile("(Interest Calculator): acquiring semaphores");
+
+        SemaphoreWait(DBSemaphore, BLOCK);
+
+        sleep(100);
+        SemaphoreWait(SharedMemorySemaphore, BLOCK);
+
+
+        SemaphoreSignal(SharedMemorySemaphore);
+          
+        SemaphoreSignal(DBSemaphore);
+
+        printToLogFile("(Interest Calculator): released semaphores");
+
+    }
+
+}
+
+
+
+void normalInterestCalculator(){
+    int semID = getSemId(clientSemKey);
+
+    //semInit(semID);
+    int msgID = getmsgQueueID();
+
+    GenericMessage sendingMessage;
+    GenericMessage receivingMessage;
+
+    sendingMessage.message_type = serverMessageType;
+    receivingMessage.message_type = clientMessageType;
+
+    resetDataBundle(&sendingMessage.data);
+    resetDataBundle(&receivingMessage.data);
+
+    //puts("At any time, enter \"x\" to quit the program");
+
+    signal(SIGHUP, exit_program);
+
+
+    //-------------------------------------------------------------------------------------------------------------
+    // Sign in process to register the client with the server so that the server can shut down the system
+    // Sign in process also limits the system to only have 1 interest calculator, 5 atms, and 1 DB editor
+
+    //register the client with the server
+    SemaphoreWait(semID, BLOCK);
+
+    resetDataBundle(&sendingMessage.data);
+
+    sendingMessage.data.type.message = SIGNIN;
+    sendingMessage.data.pid = getpid();
+    sendMessage(msgID, sendingMessage, NOBLOCK);           // Sending the SEND struct; contains PID of the current process
+
+    resetDataBundle(&sendingMessage.data);
+
+    receiveMessage(msgID, &receivingMessage, BLOCK);     // Receiving the DB struct; contains response
+
+    SemaphoreSignal(semID);
+
+    if(receivingMessage.data.response == NOSPACE){
+        puts("The maximum number of clients has been reached! Quiting program....");
+        exit(0);
+    }else if(receivingMessage.data.response != OK){
+        perror("(DBeditor) Error in sign in process: ");
+        exit(0);
+    }
+
+    int response;
+
+    while(1){
+
+       // sleep(60);
+
+       //testing
+       sleep(15);
+
+        SemaphoreWait(semID, BLOCK);
+
+        resetDataBundle(&sendingMessage.data);
+
+        sendingMessage.data.type.message = INTEREST;
+        sendingMessage.data.account.accountNumber = 123; // dummy account number
+        sendingMessage.data.account.isLocked = 0;
+
+        sendMessage(msgID, sendingMessage, NOBLOCK);
+
+        resetDataBundle(&receivingMessage.data);
+        receiveMessage(msgID, &receivingMessage, BLOCK);
+
+        response = receivingMessage.data.response;
+
+        if (response == -1)
+        {
+            break;
+        }
+
+        SemaphoreSignal(semID);
+    }
+
+}
 
 
 //For testing and debugging
