@@ -135,9 +135,9 @@ int main(int argc, char *argv[])
     while(1){
 
         if(currentCase == 1){
-            printToLogFile("(DBserver): acquiring semaphores and sending message");
+            printToLogFile("(DBserver): acquiring semaphores and sending message"); // Getting the sempahore
 
-            SemaphoreWait(SharedMemoryID, BLOCK);
+            SemaphoreWait(SharedMemoryID, BLOCK);   // Waiting the semaphore
 
             sleep(100);
 
@@ -165,8 +165,7 @@ int main(int argc, char *argv[])
 
         message_received_message_type = receivingMessage.data.type.message;
 
-       /*  print_current_Accounts_DB(accounts,numberOfAccounts, "DB After receiving message"); */
-
+        /* Switch case to handle each user opeartion input (i.e., BALANCE request)*/
         switch (message_received_message_type)
         {
         case PIN:
@@ -207,6 +206,7 @@ int main(int argc, char *argv[])
 
         x++;
 
+        /* Send the message containing the info on the operation */
         sendMessage(msgID, sendingMessage, NOBLOCK);
 
         if(currentCase == 1){
@@ -223,12 +223,16 @@ int main(int argc, char *argv[])
 
     wait(NULL);
 
+    // Free the compendulum of accounts
     free(accounts);
 
+    // Delete the semaphore
     semDelete(semID);
 
+    // Delete the message queue
     deleteMessageQueue(msgID);
 
+    // If paramteres were specified in the ./DBserver call then delete the shared memory semaphore and the DB semaphore (i.e., "./DBserver 1")
     if(param == 1 || param == 2){
         semDelete(SharedMemorySemKey);
         semDelete(DBFileSemKey);
@@ -246,6 +250,7 @@ DataBundle Handle_PIN(DataBundle message, Account** accounts, int numberOfAccoun
     int account_number = message.account.accountNumber;
     int pin = message.account.pin - 1;
 
+    // Checking if the account and corresponding PIN exist and setting to result
     int result = query_account_and_pin_in_db(*accounts, numberOfAccounts, account_number, pin);
 
     if( result == -1 ){  // account exists but incorrect pin
@@ -289,8 +294,6 @@ DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAc
     if(current_funds == -1){
         perror("DBServer: error in Handle_Balance");
     }
-    //int current_funds = 0;
-
 
     responseData.response = current_funds;
     responseData.account.funds = current_funds;
