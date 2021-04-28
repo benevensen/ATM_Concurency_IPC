@@ -211,9 +211,6 @@ int main(int argc, char *argv[]){
 
         response = receivingMessage.data.response;
         
-       /*  printf("response was %d", response);
-        printResponseType(response); */
-        
         /* If we receive the "OK" from the DB we may proceed to selection */
         
         if(response == PIN_WRONG){
