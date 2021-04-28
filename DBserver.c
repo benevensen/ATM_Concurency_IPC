@@ -302,6 +302,9 @@ DataBundle Handle_BALANCE( DataBundle message, Account* accounts, int numberOfAc
     
 }
 
+/**
+ * Method for handling the WITHDRAW operation the user can choose
+ * */
 DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAccounts, int currentAccount){
     
     DataBundle responseData;
@@ -325,6 +328,7 @@ DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAc
             exit(1);
         }
 
+        // checking the amount of funds in the database
         current_funds = query_balance_in_db(accounts, numberOfAccounts,account); 
 
         responseData.account.funds = current_funds;
@@ -334,25 +338,29 @@ DataBundle Handle_WITHDRAW(DataBundle message, Account* accounts, int numberOfAc
     return responseData;
 }
 
+// Method for handling the transfer operation
 DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAccounts, int sendingAccount, int receivingAccount){
 
     DataBundle responseData;
 
+    //the requested transfer amount is in the account funds section
     float requested_transfer_amount = message.account.funds;
     
     //check if receiving account exists
     int result = check_account_in_db(accounts, numberOfAccounts, receivingAccount);
 
+    // checking the funds in the DB
     float current_funds = query_balance_in_db(accounts, numberOfAccounts, sendingAccount); 
 
+    // recepient DNE
     if(result == -1){
         responseData.response = RECIPIENT_DOES_NOT_EXIST;
     }else if(requested_transfer_amount < 0) { // can only transfer money and not debt
         responseData.response = INVALID_AMOUNT;
-    }else if(current_funds < requested_transfer_amount){
+    }else if(current_funds < requested_transfer_amount){ // insufficient funds
         responseData.response = NSF;
     } else {
-        /* Increment the funds in the recepient's account */
+        /* Increment the funds in the recepient's account & handle potential error*/
         int incremented_result = depost_within_in_db(accounts, numberOfAccounts, receivingAccount, requested_transfer_amount);
         DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
         if(incremented_result == -1){
@@ -360,7 +368,7 @@ DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAc
             exit(1);
         }
 
-        //decrememt the funds in the account
+        //decrememt the funds in the account & handle porential error
         int decremented_result = withdrawal_within_in_db(accounts, numberOfAccounts, sendingAccount, requested_transfer_amount);
         DB_UPDATE_FILE(accounts,numberOfAccounts,filename);
         if(decremented_result == -1){
@@ -378,13 +386,15 @@ DataBundle Handle_TRANSFER(DataBundle message, Account* accounts, int numberOfAc
 
 }
 
+// Method for updating the DB
 void Handle_UPDATE_DB(DataBundle message,  Account** accounts, int* numberOfAccounts){
 
     Account account = message.account;
 
+    // If the account DNE, add it
     if(query_account_in_db(*accounts, *numberOfAccounts, account.accountNumber) == -1){
         *accounts = add_account_to_db(*accounts, numberOfAccounts, account);
-    }else{
+    }else{  // elsewise update the content of it 
         update_account_in_db(*accounts, *numberOfAccounts, account);
     }
     
@@ -538,9 +548,9 @@ void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,const char *inputFile
 
         //print the accounts to the DBFile
         if(accounts[x].isLocked == 1){
-            fprintf(file,"x%04d,%03d,%.2f", accounts[x].accountNumber,accounts[x].pin,accounts[x].funds);
+            fprintf(file,"x%04d,%03d,%.2f", accounts[x].accountNumber,accounts[x].pin,accounts[x].funds);   //if the account is locked
         }else{
-            fprintf(file,"%05d,%03d,%.2f", accounts[x].accountNumber,accounts[x].pin,accounts[x].funds);
+            fprintf(file,"%05d,%03d,%.2f", accounts[x].accountNumber,accounts[x].pin,accounts[x].funds);    // if the account is not locked
         }
 
         if(x < numberOfAccounts -1){
@@ -559,18 +569,22 @@ void DB_UPDATE_FILE(Account *accounts,int numberOfAccounts,const char *inputFile
 Account* add_account_to_db(Account *accounts,int* numberOfAccounts, Account account){
     Account newAccount;
 
+    // making the new account info
     newAccount.accountNumber = account.accountNumber;
     newAccount.pin = account.pin;
     newAccount.funds = account.funds;
     newAccount.isLocked = account.isLocked;
 
+    // copying and increment the number of accounts length
     int newArrayLength = *numberOfAccounts + 1; 
 
     Account *newArray;
     newArray =  (Account *) malloc( (newArrayLength) * sizeof(Account) );
 
+    // copying outdated account info into new account info array
     for(int x = 0; x < newArrayLength; x++){
 
+        // if x is at the previously least significant index
         if(x == newArrayLength -1){
             newArray[*numberOfAccounts].accountNumber = newAccount.accountNumber;
             newArray[*numberOfAccounts].pin = newAccount.pin;
@@ -590,6 +604,7 @@ Account* add_account_to_db(Account *accounts,int* numberOfAccounts, Account acco
 
     *numberOfAccounts = newArrayLength;
 
+    // freeing the previous account array
     free(accounts);
 
     return newArray;
@@ -600,9 +615,9 @@ Account* add_account_to_db(Account *accounts,int* numberOfAccounts, Account acco
 //returns a pointer to a newly sized array with the updated information
 void lock_account_in_db(Account *accounts,int numberOfAccounts, int accountToLock){
 
-    
+    // iterating through the accounts
     for(int x = 0; x < numberOfAccounts; x++){
-
+        // if we found the account to lock; lock it!
         if(accounts[x].accountNumber == accountToLock){
             accounts[x].isLocked = 1;
             break;
@@ -624,8 +639,6 @@ int query_account_and_pin_in_db(Account *accounts,int numberOfAccounts,int accou
 
         //checks if the account numbers exist in the array of accounts
         if( accounts[x].isLocked == 0  && accounts[x].accountNumber == account_number){
-
-           
 
             if(accounts[x].pin == pin){ // if the encrypted pin matchs, return 1
                 return 1;
@@ -712,6 +725,7 @@ int depost_within_in_db(Account *accounts,int numberOfAccounts,int account_numbe
     {
         if (accounts[i].accountNumber == account_number)
         {
+            //increment the funds by the deposted amount
             accounts[i].funds += funds_being_deposited;
 
             return 1;
@@ -733,7 +747,6 @@ void update_account_in_db(Account *accounts,int numberOfAccounts,Account account
 
         //checks if the account numbers exist in the array of accounts
         if(accounts[x].accountNumber == account.accountNumber){
-
             accounts[x].pin = account.pin;
             accounts[x].funds = account.funds;
             accounts[x].isLocked = account.isLocked;
