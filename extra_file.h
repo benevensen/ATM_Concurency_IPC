@@ -5,15 +5,19 @@
 #include <sys/types.h>
 #include <sys/msg.h>
 
-
+//keys for sharedmemory
 const int shmKey = 99999;
 
+//keys for semaphores
 const int clientSemKey = 99999;
 const int SharedMemorySemKey = 99997;
 const int DBFileSemKey = 99994;
 
+//keys for message queues
 const int msgKey = 99999;
 
+
+//constants
 const int clientSemaphore = 0;
 const int mailboxSemaphore = 1;
 
@@ -30,10 +34,12 @@ typedef union sharedVar
     int number;
 } sharedVar;
 
+
+//Log file name
 const char logFile[20] = "Log.txt";
 
-// Shared Memory Interface
 
+// Shared Memory Interface
 const char buffer[256];
 
 int getShmId(size_t size){
@@ -262,16 +268,6 @@ int getmsgQueueID(){
     return messageQueueId;
 }
 
-/* int getNewMsgQueueID(){
-    int messageQueueId;
-
-    if( (messageQueueId = msgget((key_t) IPC_PRIVATE, IPC_CREAT| 0600))  == -1 ){
-        perror( "Error in msgget");
-        exit(1);
-    }
-
-    return messageQueueId;
-} */
 
 int sendMessageDefault(int messageQueueId, my_message message, int shouldIBlockIfFull){
 
@@ -333,6 +329,8 @@ int deleteMessageQueue(int messageQueueId){
     return result;
 }
 
+
+//Utility function for logging information to log file
 void printToLogFile(char* message){
      
     

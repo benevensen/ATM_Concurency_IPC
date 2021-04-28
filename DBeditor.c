@@ -59,20 +59,23 @@ float getUserInputFloat(char *message){
 int main(int argc, char *argv[])
 {
 
+    //get client semaphore id
     int semID = getSemId(clientSemKey);
 
-    //semInit(semID);
+    //get message queue id
     int msgID = getmsgQueueID();
 
+    //variable for flagging if deadlock mode is on
     int currentCase = -1;
 
+    //checks if there is 2 arguments, if there is 2 arguements and the second argument is 1 : the system will attempt to deadlock
     if(argc > 1){
         if(atoi(argv[1]) == 1){
             currentCase = 1;
-        }else if(atoi(argv[1]) == 2){
-            currentCase = 2;
         }
     }
+
+    //setting up messages for sending and receiving
     GenericMessage sendingMessage;
     GenericMessage receivingMessage;
 
@@ -82,9 +85,8 @@ int main(int argc, char *argv[])
     resetDataBundle(&sendingMessage.data);
     resetDataBundle(&receivingMessage.data);
 
-    //puts("At any time, enter \"x\" to quit the program");
-
-    signal(SIGHUP, exit_program);
+ 
+    signal(SIGHUP, exit_program);  //registers the SIGHUP signal with the exit_program function as the handler function
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -93,31 +95,33 @@ int main(int argc, char *argv[])
 
     if(currentCase == 1){
         printToLogFile("(DBeditor) SIGNIN: acquiring semaphores and sending message");
-    }else if(currentCase == 2){
-        puts("(DBeditor) SIGNIN: acquiring semaphores and sending message");
-    }    
+    }  
 
     //register the client with the server
+
+    //enter the critical section
     SemaphoreWait(semID, BLOCK);
 
     resetDataBundle(&sendingMessage.data);
 
     sendingMessage.data.type.message = SIGNIN;
     sendingMessage.data.pid = getpid();
+
     sendMessage(msgID, sendingMessage, NOBLOCK);           // Sending the SEND struct; contains PID of the current process
 
     resetDataBundle(&sendingMessage.data);
 
     receiveMessage(msgID, &receivingMessage, BLOCK);     // Receiving the DB struct; contains response
 
+    //exit the critical section
     SemaphoreSignal(semID);
 
+    //if deadlock mode, output state to log file
     if(currentCase == 1){
         printToLogFile("(DBeditor) SIGNIN: released semaphores and received message");
-    }else if(currentCase == 2){
-        puts("(DBeditor) SIGNIN: released semaphores and received message");
     }
-
+    
+    //check response from server to see if client signed in properly
     if(receivingMessage.data.response == NOSPACE){
         puts("The maximum number of clients has been reached! Quiting program....");
         exit(0);
@@ -129,36 +133,42 @@ int main(int argc, char *argv[])
 
 //-------------------------------------------------------------------------------------------------------------
 
+    //initalize some instance variables
+
     int account_number = -1;
     int pin = -1;
     float funds = -1.0;
 
     int response;
 
+    //infinite loop
     while (1)
     {
-        //fgets(buffer, 10, stdin);
-
+        
+        //gets input from user
         account_number = getUserInput("What is the account number?");
         pin = getUserInput("What is the PIN?");
         funds = getUserInputFloat("What is the amount of funds? Please answer with a decimal number");
 
+        //if invalid input, get input again
         if ( account_number == -1 || pin == -1 || funds == -1.0){
             puts("Error in one of the inputs, please enter the information again");
             continue;
         }
 
+        //if deadlock mode, log state to log file
         if(currentCase == 1){
             printToLogFile("(DBeditor): acquiring semaphores and sending message");
-        }else if(currentCase == 2){
-            puts("(DBeditor): acquiring semaphores and sending message");
         }
 
+        //enter critical section
         SemaphoreWait(semID, BLOCK );
 
-
+        //reset databundle
         resetDataBundle(&sendingMessage.data);
 
+
+        // create message for server
         sendingMessage.data.type.message = UPDATE_DB;
 
         sendingMessage.data.account.accountNumber = account_number;
@@ -166,25 +176,27 @@ int main(int argc, char *argv[])
         sendingMessage.data.account.funds = funds;
         sendingMessage.data.account.isLocked = 0;
 
-
+        //send message to server
         sendMessage(msgID, sendingMessage, NOBLOCK);
 
         resetDataBundle(&receivingMessage.data);
         
+        //receive message from server
         receiveMessage(msgID, &receivingMessage, BLOCK);
 
         response = receivingMessage.data.response;
 
+        //exit critical section
+        SemaphoreSignal(semID);
+
+        //if response is -1, end loop
         if( response == -1){
             break;
         }
-
-        SemaphoreSignal(semID);
-
+        
+        //if deadlock mode, log state to log file
         if(currentCase == 1){
             printToLogFile("(DBeditor): released semaphores and received message");
-        }else if(currentCase == 2){
-            puts("(DBeditor): released semaphores and received message");
         }
 
     }
